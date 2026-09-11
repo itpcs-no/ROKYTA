@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {buildParkedCars} from './parked-cars.js';
 import {garage,ramp,pool} from './project-geometry.js';
 // Visual reconstruction of the 1 August 2018 references, fitted to the PDF footprint.
 // Facade opening rhythm and terrain are estimates, not measured survey geometry.
@@ -55,8 +56,9 @@ export function buildExterior(){
  box(root,13.4,ramp.bottom/2,26.5,5.2,ramp.bottom,5.85,paving);
  // Lower drive, two planted terraces, grass-roof parking below the western terrace.
  const groundShape=new T.Shape();groundShape.moveTo(-56,52);groundShape.lineTo(56,52);groundShape.lineTo(56,-52);groundShape.lineTo(-56,-52);groundShape.closePath();const hole=new T.Path();hole.moveTo(pool.x0,-pool.z0);hole.lineTo(pool.x1,-pool.z0);hole.lineTo(pool.x1,-pool.z1);hole.lineTo(pool.x0,-pool.z1);hole.closePath();groundShape.holes.push(hole);const groundGeo=new T.ShapeGeometry(groundShape);groundGeo.rotateX(-Math.PI/2);const groundMesh=new T.Mesh(groundGeo,lawn);groundMesh.position.y=-.06;groundMesh.receiveShadow=true;root.add(groundMesh);box(root,0,-.04,-7.8,74,.08,4.3,paving);box(root,0,ramp.bottom/2,30.5,95,ramp.bottom,5,paving);
- for(const side of [-1,1]){const x=side<0?-23:25;box(root,x,1.24,10.5,19,2.48,26,earth);box(root,x,2.51,10.5,19,.08,26,lawn);box(root,x,1.22,-2.5,19,2.48,.23,white);box(root,x,2.58,12.8,19,.1,1.5,paving);box(root,x,2.6,22.4,19,.13,4,paving)}
+ for(const side of [-1,1]){const x=side<0?-23:25;box(root,x,1.24,side<0?12.505:10.5,19,2.48,side<0?21.99:26,earth);box(root,x,2.51,10.5,19,.08,26,lawn);box(root,x,1.22,side<0?1.51:-2.5,19,2.48,.23,white);box(root,x,2.58,12.8,19,.1,1.5,paving);box(root,x,2.6,22.4,19,.13,4,paving)}
  box(root,-23,.0,-4.8,25,.12,8,paving);box(root,-23,2.35,-1.6,25,.22,6.2,white);box(root,-23,2.49,-1.6,25,.08,6.2,lawn);box(root,-23,1.1,1.4,25,2.3,.22,white);for(let x=-35.5;x<=-10.5;x+=3.125)box(root,x,1.1,-4.7,.25,2.3,.25,white);
+ root.add(buildParkedCars());
  // Garden paths, retaining edges, stair links and planted borders.
  for(const x of [-10.3,12.5]){box(root,x,2.51,8.7,2.1,.13,23,paving);for(let i=0;i<16;i++)box(root,x,(i+1)*2.5/16/2,-7.6+i*.29,2.1,(i+1)*2.5/16,.29,paving)}
  for(const x of [-33,35]){box(root,x,1.3,10.6,.22,2.6,26,white)}
