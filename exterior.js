@@ -10,7 +10,7 @@ export function buildExterior(){
  const box=(g,x,y,z,w,h,d,m=white)=>{if(w<=0||h<=0||d<=0)throw Error('Nonpositive exterior dimensions');const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;g.add(o);return o};
  // Each elevation is assembled around actual openings, so glazing is not pasted on a solid wall.
  function facade(){} // The real PDF walls/windows are rendered by the shared floor groups.
- function rail(axis,fixed,a,b,y){const g=new T.Group();root.add(g);if(axis==='z'){g.rotation.y=-Math.PI/2;g.position.x=fixed}else g.position.z=fixed;box(g,(a+b)/2,y+.57,0,b-a,.8,.025,railglass);box(g,(a+b)/2,y+1.02,0,b-a,.035,.045,frame);for(let p=a;p<=b+.01;p+=Math.min(1.5,b-a))box(g,p,y+.51,0,.035,1.02,.035,frame)}
+ function rail(axis,fixed,a,b,y){const g=new T.Group();root.add(g);if(axis==='z'){g.rotation.y=-Math.PI/2;g.position.x=fixed}else g.position.z=fixed;box(g,(a+b)/2,y+.57,0,b-a,.8,.025,railglass);box(g,(a+b)/2,y+1.02,0,b-a,.035,.045,frame);const count=Math.ceil((b-a)/1.5);for(let i=0;i<=count;i++)box(g,a+(b-a)*i/count,y+.51,0,.035,1.02,.035,frame)}
  function cap(x0,x1,z0,z1,y){const start=root.children.length;box(root,(x0+x1)/2,y-.12,(z0+z1)/2,x1-x0,.42,z1-z0,roof);for(const z of [z0,z1])box(root,(x0+x1)/2,y+.2,z,x1-x0,.4,.18);for(const x of [x0,x1])box(root,x,y+.2,(z0+z1)/2,.18,.4,z1-z0);roofs.push(...root.children.slice(start))}
  function balcony(axis,fixed,a,b,y,depth=1.7,sign=1){const center=fixed+sign*depth/2;if(axis==='x'){box(root,(a+b)/2,y-.1,center,b-a,.2,depth);box(root,(a+b)/2,y+.13,fixed+sign*depth,b-a,.42,.16);rail('x',fixed+sign*depth,a,b,y+.26);rail('z',a,Math.min(fixed,fixed+sign*depth),Math.max(fixed,fixed+sign*depth),y+.26);rail('z',b,Math.min(fixed,fixed+sign*depth),Math.max(fixed,fixed+sign*depth),y+.26)}else{box(root,center,y-.1,(a+b)/2,depth,.2,b-a);box(root,fixed+sign*depth,y+.13,(a+b)/2,.16,.42,b-a);rail('z',fixed+sign*depth,a,b,y+.26);rail('x',a,Math.min(fixed,fixed+sign*depth),Math.max(fixed,fixed+sign*depth),y+.26);rail('x',b,Math.min(fixed,fixed+sign*depth),Math.max(fixed,fixed+sign*depth),y+.26)}}
  // Long southern elevation, continuous balconies and recessed third storey.
@@ -24,10 +24,16 @@ export function buildExterior(){
   for(const [a,b] of [[x0,-4.78],[5.02,x1]]){const rear=centers.filter(c=>c>a+1.5&&c<b-1.5);facade('x',back,a,b,y,2.78,rear.map((c,i)=>[c,i%2?1.6:2.1,f===2?1.3:.15,f===2?.65:2.1]));if(f===1)rear.filter((c,i)=>i%2===0).forEach(c=>balcony('x',back,c-1.6,c+1.6,y,1.05))}
   for(const x of [x0,x1])facade('z',x,front,back,y,2.78,[[(front+back)/2,1.3,.9,1.15]]);
   
-  balcony('x',front,x0,x1,y, f===2?3.05:1.8,-1);
+  if(f<2)balcony('x',front,x0,x1,y,1.8,-1);
  }
  cap(-23.68,23.73,-20.87,-12.08,levels[3]);
- for(const [x0,x1] of [[-28.85,-23.68],[23.73,28.85]]){box(root,(x0+x1)/2,levels[2]-.12,-16.53,x1-x0,.24,12.9,paving);rail('z',x0,-22.98,-10.08,levels[2]+.02);rail('z',x1,-22.98,-10.08,levels[2]+.02);rail('x',-10.08,x0,x1,levels[2]+.02)}
+ // A single U-shaped top deck joins both end terraces to the front balcony.
+ // Rail only exposed edges; the two 3.05 m connections and facade doors stay clear.
+ const deckOutline=[[-28.85,-23.92],[28.85,-23.92],[28.85,-10.08],[23.73,-10.08],[23.73,-20.87],[-23.68,-20.87],[-23.68,-10.08],[-28.85,-10.08]];
+ const deckShape=new T.Shape();deckOutline.forEach(([x,z],i)=>i?deckShape.lineTo(x,-z):deckShape.moveTo(x,-z));deckShape.closePath();
+ const deckGeo=new T.ExtrudeGeometry(deckShape,{depth:.24,bevelEnabled:false});deckGeo.rotateX(-Math.PI/2);const deck=new T.Mesh(deckGeo,paving);deck.position.y=levels[2]-.24;deck.castShadow=true;deck.receiveShadow=true;deck.name='Continuous balcony and end terraces';root.add(deck);
+ const deckRails=[['x',-23.92,-28.85,28.85],['z',-28.85,-23.92,-10.08],['z',28.85,-23.92,-10.08],['x',-10.08,-28.85,-23.68],['x',-10.08,23.73,28.85],['z',-23.68,-12.08,-10.08],['z',23.73,-12.08,-10.08]];
+ for(const [axis,fixed,a,b] of deckRails){rail(axis,fixed,a,b,levels[2]);if(axis==='x')box(root,(a+b)/2,levels[2]-.12,fixed,b-a,.24,.08,white);else box(root,fixed,levels[2]-.12,(a+b)/2,.08,.24,b-a,white)}
  // Connecting stair wing; fourth floor retained from the proposed drawings.
  for(let f=0;f<3;f++){const y=levels[f];for(const x of [-4.78,5.02])facade('z',x,-10.8,-1.4,y,2.78,[[-8,1.4,1.1,1.1],[-4.5,1.65,.12,2.2]]);}cap(-4.81,4.91,-12.2,-1.35,levels[3]);
  for(const x of [-4.78,4.86])facade('z',x,-9.32,-1,levels[3],2.4,[],stone);for(const z of [-9.32,-1])facade('x',z,-4.78,4.86,levels[3],2.4,z===-9.32?[[.8,1,0,2.1]]:[],stone);cap(-4.82,4.89,-9.35,-.96,levels[3]+2.78);
@@ -76,5 +82,5 @@ export function buildExterior(){
  // Compact timber play structures visible in the landscape references.
  for(const x of [-24,26]){box(root,x,2.59,15,4.5,.09,4,roof);for(const dx of [-.75,.75])for(const dz of [-.6,.6])box(root,x+dx,3.65,15+dz,.12,2.1,.12,wood);box(root,x,4.55,15,1.8,.12,1.6,wood);for(let i=0;i<5;i++)box(root,x,2.9+i*.3,16-i*.15,1,.08,.15,wood)}
 
- root.userData={reference:'PDF geometry with facade details',estimatedTerrain:true,roofs,garageDoor:door};return root;
+ root.userData={reference:'PDF geometry with facade details',estimatedTerrain:true,roofs,garageDoor:door,deckOutline,deckRails};return root;
 }
