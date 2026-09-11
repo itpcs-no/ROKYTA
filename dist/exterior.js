@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {buildParkedCars} from './parked-cars.js';
-import {garage,ramp,pool,levels,footprints,gardenStairs} from './project-geometry.js';
+import {garage,ramp,pool,levels,footprints,gardenStairs,access} from './project-geometry.js';
 // Visual reconstruction of the 1 August 2018 references, fitted to the PDF footprint.
 // Facade opening rhythm and terrain are estimates, not measured survey geometry.
 export function buildExterior(){
@@ -58,11 +58,10 @@ export function buildExterior(){
  const vertices=[ramp.x0,ramp.top,ramp.z0,ramp.x0,ramp.top,ramp.z1,ramp.x1,ramp.bottom,ramp.z1,ramp.x0,ramp.top,ramp.z0,ramp.x1,ramp.bottom,ramp.z1,ramp.x1,ramp.bottom,ramp.z0];
  for(const z of [ramp.z0,ramp.z1])vertices.push(ramp.x0,0,z,ramp.x1,0,z,ramp.x1,ramp.bottom,z,ramp.x0,0,z,ramp.x1,ramp.bottom,z,ramp.x0,ramp.top,z);
  const rg=new T.BufferGeometry();rg.setAttribute('position',new T.Float32BufferAttribute(vertices,3));rg.computeVertexNormals();const rm=paving.clone();rm.side=T.DoubleSide;const rampMesh=new T.Mesh(rg,rm);rampMesh.receiveShadow=true;rampMesh.castShadow=true;root.add(rampMesh);
- box(root,(ramp.x1+16)/2,ramp.bottom/2,(ramp.z0+ramp.z1)/2,16-ramp.x1,ramp.bottom,ramp.z1-ramp.z0,paving);
- box(root,13.4,ramp.bottom/2,26.5,5.2,ramp.bottom,5.85,paving);
+ const drive=box(root,(access.x0+access.x1)/2,access.level/2,(access.z0+access.z1)/2,access.x1-access.x0,access.level,access.z1-access.z0,paving);drive.name='Unobstructed garage approach';
  // Lower drive, two planted terraces, grass-roof parking below the western terrace.
  const groundShape=new T.Shape();groundShape.moveTo(-56,52);groundShape.lineTo(56,52);groundShape.lineTo(56,-52);groundShape.lineTo(-56,-52);groundShape.closePath();const hole=new T.Path();hole.moveTo(pool.x0,-pool.z0);hole.lineTo(pool.x1,-pool.z0);hole.lineTo(pool.x1,-pool.z1);hole.lineTo(pool.x0,-pool.z1);hole.closePath();groundShape.holes.push(hole);const groundGeo=new T.ShapeGeometry(groundShape);groundGeo.rotateX(-Math.PI/2);const groundMesh=new T.Mesh(groundGeo,lawn);groundMesh.position.y=-.06;groundMesh.receiveShadow=true;root.add(groundMesh);box(root,0,-.04,-7.8,74,.08,4.3,paving);box(root,0,ramp.bottom/2,30.5,95,ramp.bottom,5,paving);
- for(const side of [-1,1]){const x=side<0?-23:25;box(root,x,1.24,side<0?12.505:10.5,19,2.48,side<0?21.99:26,earth);box(root,x,2.51,10.5,19,.08,26,lawn);box(root,x,1.22,side<0?1.51:-2.5,19,2.48,.23,white);box(root,x,2.58,12.8,19,.1,1.5,paving);box(root,x,2.6,22.4,19,.13,4,paving)}
+ for(const side of [-1,1]){const x=side<0?-23:25;box(root,x,1.24,side<0?12.505:10.5,19,2.48,side<0?21.99:26,earth);box(root,x,2.51,10.5,19,.08,26,lawn);box(root,x,1.22,side<0?1.51:-2.5,19,2.48,.23,white);box(root,x,2.525,12.8,19,.1,1.5,paving);box(root,x,2.51,22.4,19,.13,4,paving)}
  box(root,-23,.0,-4.8,25,.12,8,paving);box(root,-23,2.35,-1.6,25,.22,6.2,white);box(root,-23,2.49,-1.6,25,.08,6.2,lawn);box(root,-23,1.1,1.4,25,2.3,.22,white);for(let x=-35.5;x<=-10.5;x+=3.125)box(root,x,1.1,-4.7,.25,2.3,.25,white);
  root.add(buildParkedCars());
  // Garden paths, retaining edges, stair links and planted borders.
@@ -72,8 +71,8 @@ export function buildExterior(){
   const profile=new T.Shape();profile.moveTo(z0,0);profile.lineTo(z0,rise);
   for(let i=0;i<count;i++){profile.lineTo(z0+(i+1)*run,(i+1)*rise);if(i<count-1)profile.lineTo(z0+(i+1)*run,(i+2)*rise)}
   profile.lineTo(z1,0);profile.closePath();const geo=new T.ExtrudeGeometry(profile,{depth:width,bevelEnabled:false,curveSegments:1});geo.rotateY(-Math.PI/2);const flight=new T.Mesh(geo,paving);flight.position.x=x+width/2;flight.castShadow=true;flight.receiveShadow=true;flight.name='Continuous garden stairs';root.add(flight);
-  box(root,x,top-.1,9.8,width,.2,25.2,paving);
-  for(const z of [12.8,22.4]){const a=x<0?-13.5:x+width/2,b=x<0?x-width/2:15.5;box(root,(a+b)/2,top-.1,z,b-a+.02,.2,1.55,paving)}
+  const length=access.pathEnd-gardenStairs.z1,center=(access.pathEnd+gardenStairs.z1)/2;box(root,x,(top-.18)/2,center,width,top-.18,length,earth);const path=box(root,x,top-.09,center,width,.18,length,paving);path.name='Ground-supported footpath';
+  for(const z of [12.8]){const a=x<0?-13.5:x+width/2,b=x<0?x-width/2:15.5;box(root,(a+b)/2,(top-.18)/2,z,b-a,top-.18,1.55,earth);box(root,(a+b)/2,top-.09,z,b-a,.18,1.55,paving)}
  }
  for(const x of [-33,35]){box(root,x,1.3,10.6,.22,2.6,26,white)}
  function shrub(x,z,y=2.6,r=.45){const o=new T.Mesh(new T.IcosahedronGeometry(r,1),leaf);o.position.set(x,y+r*.7,z);o.scale.y=.75;root.add(o);o.castShadow=true}

@@ -15,3 +15,18 @@ export const footprints=[
  [[-4.82,-9.35,4.89,-.96]]
 ];
 export const gardenStairs={x:[-10.3,12.5],z0:-7.745,z1:-2.8,width:2.1,bottom:0,top:2.575,count:16};
+// Garage access corridor: keep this volume free of raised pedestrian slabs.
+export const access={x0:ramp.x1,x1:15.25,z0:ramp.z0,z1:28,level:ramp.bottom,pathEnd:13.575};
+export function exteriorHeight(x,z){
+ let y=.05;
+ if(z>-2.5&&z<23.5&&((x>-32.5&&x<-13.5)||(x>15.5&&x<34.5)))y=2.58;
+ for(const sx of gardenStairs.x)if(Math.abs(x-sx)<=gardenStairs.width/2){
+  if(z>=gardenStairs.z0&&z<gardenStairs.z1)y=Math.ceil((z-gardenStairs.z0)/(gardenStairs.z1-gardenStairs.z0)*gardenStairs.count)*gardenStairs.top/gardenStairs.count;
+  else if(z>=gardenStairs.z1&&z<=access.pathEnd)y=gardenStairs.top;
+ }
+ if(z>=12.025&&z<=13.575&&((x>=-13.5&&x<=-11.35)||(x>=13.55&&x<=15.5)))y=gardenStairs.top;
+ if(z>=ramp.z0&&z<=ramp.z1&&x>=garage.x1&&x<=ramp.x1)y=rampHeight(x);
+ if(z>=garage.z0&&z<=garage.z1&&x>=garage.x0&&x<garage.x1)y=garage.floor;
+ if((x>=access.x0&&x<=access.x1&&z>=access.z0&&z<=access.z1)||(z>=28&&z<=33))y=access.level;
+ return y;
+}

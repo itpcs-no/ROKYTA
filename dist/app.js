@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {createWalker} from './avatar.js';
-import {garage,ramp,pool,rampHeight,levels,slabThickness,footprints,gardenStairs} from './project-geometry.js';
+import {garage,ramp,pool,rampHeight,levels,slabThickness,footprints,gardenStairs,exteriorHeight} from './project-geometry.js';
 import {buildExterior} from './exterior.js';
 import {OrbitControls} from './assets/OrbitControls.js';
 const $=id=>document.getElementById(id), view=$('view');
@@ -66,7 +66,7 @@ for(let i=0;i<6;i++)box(poolGroup,pool.x1-1.6+(i+.5)*.24,pool.bottom+(i+1)*.23/2
 for(const z of [pz-.35,pz+.35]){box(poolGroup,pool.x0+.25,-.3,z,.04,1.8,.04,handleMat);box(poolGroup,pool.x0-.25,.35,z,.04,.7,.04,handleMat);box(poolGroup,pool.x0,.69,z,.5,.04,.04,handleMat)}
 const walker=createWalker();scene.add(walker.root);walker.root.visible=false;const nav=new T.Vector3();let walkingTime=0;
 let selected='all', mode='orbit', yaw=0,pitch=0,keys={},drag=null;const clock=new T.Clock();
-function setDoors(){doorPivots.forEach(p=>p.rotation.y=$('doors').checked?p.userData.opened:p.userData.closed)}
+function setDoors(){const shutter=exterior.userData.garageDoor;shutter.scale.y=$('doors').checked?.045:1;shutter.position.y=(garage.floor+garage.doorHeight)*(1-shutter.scale.y);doorPivots.forEach(p=>p.rotation.y=$('doors').checked?p.userData.opened:p.userData.closed)}
 $('doors').onchange=setDoors;
 function status(){walker.root.visible=mode==='walk'&&$('figure').checked;$('startWalk').textContent=mode==='walk'?'Ukončiť prechádzku':'Prejsť sa s panáčikom'; $('status').textContent=`${selected==='all'?'Celá budova':`${selected+1}. NP`} · ${mode==='walk'?'WASD · pohyb':'obhliadka'}`;$('orbit').classList.toggle('active',mode==='orbit');$('walk').classList.toggle('active',mode==='walk');document.body.classList.toggle('walking',mode==='walk') }
 function visibility(){exterior.visible=selected==='all'||mode==='walk';ground.visible=selected!=='all'&&selected!==0;grid.visible=selected!=='all'&&selected!==0;renderer.clippingPlanes=$('cutaway').checked?[new T.Plane(new T.Vector3(0,-1,0),2.55)]:[];for(let f=0;f<4;f++){groups[f].visible=selected==='all'||selected===f||(mode==='walk'&&f<selected);groups[f].userData.plan.visible=$('plan').checked&&selected===f} $('maptitle').textContent=`${(selected==='all'?1:selected)+1}. NP`;$('mapimg').src=`assets/plan${(selected==='all'?1:selected)+1}.png`;status()}
@@ -82,7 +82,8 @@ const mapped={ArrowUp:'w',ArrowDown:'s',ArrowLeft:'a',ArrowRight:'d'};window.add
 function inside(x,z,p){let c=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const a=p[i],b=p[j];if((a[1]>z)!==(b[1]>z)&&x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])c=!c}return c}
 function canMove(x,z){
  if($('free').checked)return true;
- const floor=selected==='all'?0:selected;
+ const floor=selected==='all'?(nav.y-1.65>2.5?1:0):selected;
+ if(selected==='all'&&!$('doors').checked&&Math.abs(x-garage.x1)<.2&&z>garage.doorZ0&&z<garage.doorZ1)return false;
  if(selected!=='all'){
   let supported=footprints[floor].some(([a,b,c,d])=>x>=a+.15&&x<=c-.15&&z>=b+.15&&z<=d-.15);
   if(floor===2)supported ||= inside(x,z,exterior.userData.deckOutline);
@@ -93,7 +94,7 @@ function canMove(x,z){
  for(const d of data[floor].doors||[]){const end=$('doors').checked?d.open:d.closed;const a=d.hinge,dx=end[0]-a[0],dz=end[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz)));if(Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz)<.17)return false}
  return !data[floor].walls.some(p=>[[0,0],[.18,0],[-.18,0],[0,.18],[0,-.18]].some(o=>inside(x+o[0],z+o[1],p)));
 }
-function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}window.addEventListener('resize',resize);visibility();orbitHome();$('loading').style.display='none';renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),.05);if(mode==='walk'){if(selected==='all'){const x=nav.x,z=nav.z;const elevated=z>-2.5&&z<23.5&&((x>-32.5&&x<-13.5)||(x>15.5&&x<34.5));let groundY=elevated?2.58:.05;for(const sx of gardenStairs.x){if(Math.abs(x-sx)<=gardenStairs.width/2){if(z>=gardenStairs.z0&&z<gardenStairs.z1)groundY=Math.ceil((z-gardenStairs.z0)/(gardenStairs.z1-gardenStairs.z0)*gardenStairs.count)*gardenStairs.top/gardenStairs.count;else if(z>=gardenStairs.z1&&z<=22.4)groundY=gardenStairs.top;}}if(z>=ramp.z0&&z<=ramp.z1&&x>=garage.x1&&x<=ramp.x1)groundY=rampHeight(x);if(z>=garage.z0&&z<=garage.z1&&x>=garage.x0&&x<garage.x1)groundY=garage.floor;if((x>=ramp.x1&&x<=16&&z>=ramp.z0&&z<29)||(z>=28&&z<=33))groundY=ramp.bottom;nav.y=groundY+1.65}const f=(keys.w?1:0)-(keys.s?1:0),r=(keys.d?1:0)-(keys.a?1:0),norm=Math.hypot(f,r)||1,speed=(keys.shift?6:2.7)*dt/norm,dx=(-Math.sin(yaw)*f+Math.cos(yaw)*r)*speed,dz=(-Math.cos(yaw)*f-Math.sin(yaw)*r)*speed;const x=Math.max(-70,Math.min(70,nav.x+dx)),z=Math.max(-70,Math.min(70,nav.z+dz));if(canMove(x,nav.z))nav.x=x;if(canMove(nav.x,z))nav.z=z;const mx=(nav.x+30.825)/62,mz=(nav.z+26)/52;$('dot').style.display=mx>=0&&mx<=1&&mz>=0&&mz<=1?'block':'none';$('dot').style.left=mx*100+'%';$('dot').style.top=mz*100+'%'
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}window.addEventListener('resize',resize);setDoors();visibility();orbitHome();$('loading').style.display='none';renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),.05);if(mode==='walk'){if(selected==='all')nav.y=exteriorHeight(nav.x,nav.z)+1.65;const f=(keys.w?1:0)-(keys.s?1:0),r=(keys.d?1:0)-(keys.a?1:0),norm=Math.hypot(f,r)||1,speed=(keys.shift?6:2.7)*dt/norm,dx=(-Math.sin(yaw)*f+Math.cos(yaw)*r)*speed,dz=(-Math.cos(yaw)*f-Math.sin(yaw)*r)*speed;const x=Math.max(-70,Math.min(70,nav.x+dx)),z=Math.max(-70,Math.min(70,nav.z+dz));if(canMove(x,nav.z))nav.x=x;if(canMove(nav.x,z))nav.z=z;const mx=(nav.x+30.825)/62,mz=(nav.z+26)/52;$('dot').style.display=mx>=0&&mx<=1&&mz>=0&&mz<=1?'block':'none';$('dot').style.left=mx*100+'%';$('dot').style.top=mz*100+'%'
  walkingTime+=dt;walker.root.position.set(nav.x,nav.y-1.65,nav.z);walker.root.rotation.y=yaw;walker.animate(walkingTime,!!(f||r));
  if($('figure').checked){const distance=4.4,height=3.2+pitch*1.2;camera.position.set(nav.x+Math.sin(yaw)*distance,nav.y+height,nav.z+Math.cos(yaw)*distance);camera.lookAt(nav.x,nav.y-.55,nav.z)}else{camera.position.copy(nav);camera.rotation.set(pitch,yaw,0,'YXZ')}
  const indoors=selected!=='all'||footprints[0].some(([a,b,c,d])=>nav.x>a&&nav.x<c&&nav.z>b&&nav.z<d);
