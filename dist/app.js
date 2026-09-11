@@ -1,11 +1,12 @@
 import * as T from 'three';
-import {garage,ramp,pool,rampHeight} from './project-geometry.js';
+import {garage,ramp,pool,rampHeight,levels,slabThickness,footprints,gardenStairs} from './project-geometry.js';
 import {buildExterior} from './exterior.js';
 import {OrbitControls} from './assets/OrbitControls.js';
 const $=id=>document.getElementById(id), view=$('view');
 try{await start()}catch(e){$('loading').style.display='block';$('loading').textContent='Model sa nepodarilo načítať. Skús obnoviť stránku v prehliadači s podporou WebGL.';console.error(e)}
 async function start(){
 const data=await fetch('./assets/model.json').then(r=>{if(!r.ok)throw Error('model');return r.json()});
+data.forEach((level,i)=>level.base=levels[i]);
 const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.setClearColor(0xdce6eb);view.append(renderer.domElement);renderer.outputColorSpace=T.SRGBColorSpace;
 const scene=new T.Scene();scene.fog=new T.Fog(0xdce6eb,130,260);const camera=new T.PerspectiveCamera(48,innerWidth/innerHeight,.06,350);const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.maxDistance=150;controls.minDistance=2;controls.maxPolarAngle=Math.PI*.49;controls.target.set(0,3,-3);
 scene.add(new T.HemisphereLight(0xeaf6ff,0x9b9689,2.5));const sun=new T.DirectionalLight(0xfff3dc,3.2);sun.position.set(-28,70,22);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-55,right:55,top:55,bottom:-55,near:1,far:150});sun.shadow.bias=-.0002;scene.add(sun);
@@ -15,8 +16,6 @@ const ground=box(scene,0,-.5,0,210,.5,190,new T.MeshStandardMaterial({color:0xbc
 const exterior=buildExterior();scene.add(exterior);
 const groups=[],floorMeshes=[],roofMeshes=[],doorPivots=[];
 const doorMat=new T.MeshStandardMaterial({color:0xb38c63,roughness:.7}),jambMat=new T.MeshStandardMaterial({color:0xebe7e0}),handleMat=new T.MeshStandardMaterial({color:0x596167,metalness:.7,roughness:.3});
-// Simplified floor footprints, in metres, aligned to extracted drawing coordinates.
-const footprints=[[[ -28.825,-23,28.825,-10.8],[-4.78,-10.8,5.02,-1.4],[-8.1,-1.4,10.3,15.85],[garage.x0,garage.z0,garage.x1,garage.z1]],[[ -28.825,-23,28.825,-10.8],[-4.78,-10.8,5.02,-1.4],[-8.1,-1.4,10.3,15.85],[garage.x0,garage.z0,garage.x1,garage.z1]],[[-23.675,-20.85,23.675,-12.1],[-4.78,-12.1,5.02,-1.4],[-8.1,-1.4,10.3,15.85]],[[-4.78,-9.32,4.86,-1.0]]];
 const loader=new T.TextureLoader();const textures=[];
 for(let f=0;f<4;f++){
  const group=new T.Group();group.position.y=data[f].base;scene.add(group);groups.push(group);floorMeshes[f]=[];roofMeshes[f]=[];
@@ -33,13 +32,22 @@ for(let f=0;f<4;f++){
   box(frame,d.width/2,height+.025,0,d.width+.095,.055,.12,jambMat);
   const lintelHeight=(data[f].wallHeight||2.55)-height-.06;if(lintelHeight>0)box(frame,d.width/2,height+.06+lintelHeight/2,0,d.width,lintelHeight,.12,mat);
  }
- for(const w of data[f].windows){const [x,z,dx,dz]=w;const cx=x+dx/2,cz=z+dz/2;box(group,cx,2.38,cz,dx,.34,dz,mat);const horizontal=dx>dz,start=horizontal?x:z,end=start+(horizontal?dx:dz);let panes=[[start,end]];
+ for(const w of data[f].windows){const [x,z,dx,dz]=w;const cx=x+dx/2,cz=z+dz/2;const horizontal=dx>dz,start=horizontal?x:z,end=start+(horizontal?dx:dz);let panes=[[start,end]];
  for(const d of data[f].doors||[]){const a=d.hinge,b=d.closed;const along=horizontal?Math.abs(a[1]-b[1])<.02:Math.abs(a[0]-b[0])<.02;const near=horizontal?Math.abs(a[1]-cz)<.5:Math.abs(a[0]-cx)<.5;if(!along||!near)continue;const da=Math.min(a[horizontal?0:1],b[horizontal?0:1])-.025,db=Math.max(a[horizontal?0:1],b[horizontal?0:1])+.025;panes=panes.flatMap(([l,r])=>db<=l||da>=r?[[l,r]]:[[l,Math.max(l,da)],[Math.min(r,db),r]].filter(([a,b])=>b-a>.025))}
- for(const [l,r] of panes)box(group,horizontal?(l+r)/2:cx,1.15,horizontal?cz:(l+r)/2,horizontal?r-l:.045,2.1,horizontal?.045:r-l,glassMat);if(dx>dz){for(const xx of [x+.025,x+dx-.025])box(group,xx,1.15,cz,.045,2.1,.065,frameMat)}else{for(const zz of [z+.025,z+dz-.025])box(group,cx,1.15,zz,.065,2.1,.045,frameMat)}}
+ for(const [l,r] of panes){
+  const pcx=horizontal?(l+r)/2:cx,pcz=horizontal?cz:(l+r)/2,pw=horizontal?r-l:dx,pd=horizontal?dz:r-l;
+  box(group,pcx,1.15,pcz,horizontal?r-l:.045,2.1,horizontal?.045:r-l,glassMat);
+  box(group,pcx,.05,pcz,pw,.1,pd,mat);
+  const head=(data[f].wallHeight||2.55)-2.2;box(group,pcx,2.2+head/2,pcz,pw,head+.006,pd,mat);
+  for(const y of [.12,2.18])box(group,pcx,y,pcz,horizontal?r-l:.065,.045,horizontal?.065:r-l,frameMat);
+  for(const edge of [l+.022,r-.022])box(group,horizontal?edge:cx,1.15,horizontal?cz:edge,horizontal?.045:.065,2.1,horizontal?.065:.045,frameMat);
+ }
+ }
+
  for(const [x,z,x1,z1] of footprints[f]){
   if(f===0&&x<pool.x0&&x1>pool.x1&&z<pool.z0&&z1>pool.z1){
-   const shape=new T.Shape();shape.moveTo(x,-z);shape.lineTo(x1,-z);shape.lineTo(x1,-z1);shape.lineTo(x,-z1);shape.closePath();const hole=new T.Path();hole.moveTo(pool.x0,-pool.z0);hole.lineTo(pool.x1,-pool.z0);hole.lineTo(pool.x1,-pool.z1);hole.lineTo(pool.x0,-pool.z1);hole.closePath();shape.holes.push(hole);const geo=new T.ExtrudeGeometry(shape,{depth:.22,bevelEnabled:false});geo.rotateX(-Math.PI/2);const slab=new T.Mesh(geo,slabMat);slab.position.y=-.22;slab.receiveShadow=true;group.add(slab);floorMeshes[f].push(slab);
-  }else floorMeshes[f].push(box(group,(x+x1)/2,-.11,(z+z1)/2,x1-x,.22,z1-z,slabMat));
+   const shape=new T.Shape();shape.moveTo(x,-z);shape.lineTo(x1,-z);shape.lineTo(x1,-z1);shape.lineTo(x,-z1);shape.closePath();const hole=new T.Path();hole.moveTo(pool.x0,-pool.z0);hole.lineTo(pool.x1,-pool.z0);hole.lineTo(pool.x1,-pool.z1);hole.lineTo(pool.x0,-pool.z1);hole.closePath();shape.holes.push(hole);const geo=new T.ExtrudeGeometry(shape,{depth:slabThickness,bevelEnabled:false});geo.rotateX(-Math.PI/2);const slab=new T.Mesh(geo,slabMat);slab.position.y=-slabThickness;slab.receiveShadow=true;group.add(slab);floorMeshes[f].push(slab);
+  }else floorMeshes[f].push(box(group,(x+x1)/2,-slabThickness/2,(z+z1)/2,x1-x,slabThickness,z1-z,slabMat));
  }
  const geo=new T.PlaneGeometry(62,52);geo.rotateX(-Math.PI/2);const plan=new T.Mesh(geo,new T.MeshBasicMaterial({map:texture,transparent:true,opacity:.94,depthWrite:false}));plan.position.set(.175,.016,0);plan.visible=false;group.add(plan);group.userData.plan=plan;
 }
@@ -70,5 +78,5 @@ const canvas=renderer.domElement;canvas.addEventListener('pointerdown',e=>{if(mo
 const mapped={ArrowUp:'w',ArrowDown:'s',ArrowLeft:'a',ArrowRight:'d'};window.addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;const k=mapped[e.key]||e.key.toLowerCase();keys[k]=true;if(mode==='walk'&&['w','a','s','d'].includes(k))e.preventDefault();if(e.key==='Escape')orbitHome()});window.addEventListener('keyup',e=>{keys[mapped[e.key]||e.key.toLowerCase()]=false});window.addEventListener('blur',()=>{keys={};drag=null});document.querySelectorAll('[data-move]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);keys[b.dataset.move]=true};b.onpointerup=b.onpointercancel=()=>keys[b.dataset.move]=false});
 function inside(x,z,p){let c=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const a=p[i],b=p[j];if((a[1]>z)!==(b[1]>z)&&x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])c=!c}return c}
 function canMove(x,z){if(selected==='all'||$('free').checked)return true;for(const d of data[selected].doors||[]){const end=$('doors').checked?d.open:d.closed;const a=d.hinge,dx=end[0]-a[0],dz=end[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz)));if(Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz)<.17)return false}return !data[selected].walls.some(p=>[[0,0],[.18,0],[-.18,0],[0,.18],[0,-.18]].some(o=>inside(x+o[0],z+o[1],p)))}
-function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}window.addEventListener('resize',resize);visibility();orbitHome();$('loading').style.display='none';renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),.05);if(mode==='walk'){camera.rotation.set(pitch,yaw,0,'YXZ');if(selected==='all'){const x=camera.position.x,z=camera.position.z;const elevated=z>-2.5&&z<23.5&&((x>-32.5&&x<-13.5)||(x>15.5&&x<34.5));let groundY=elevated?2.58:.05;if(z>=ramp.z0&&z<=ramp.z1&&x>=garage.x1&&x<=ramp.x1)groundY=rampHeight(x);if(z>=garage.z0&&z<=garage.z1&&x>=garage.x0&&x<garage.x1)groundY=garage.floor;if((x>=ramp.x1&&x<=16&&z>=ramp.z0&&z<29)||(z>=28&&z<=33))groundY=ramp.bottom;camera.position.y=groundY+1.65}const f=(keys.w?1:0)-(keys.s?1:0),r=(keys.d?1:0)-(keys.a?1:0),norm=Math.hypot(f,r)||1,speed=(keys.shift?6:2.7)*dt/norm,dx=(-Math.sin(yaw)*f+Math.cos(yaw)*r)*speed,dz=(-Math.cos(yaw)*f-Math.sin(yaw)*r)*speed;const x=Math.max(-70,Math.min(70,camera.position.x+dx)),z=Math.max(-70,Math.min(70,camera.position.z+dz));if(canMove(x,camera.position.z))camera.position.x=x;if(canMove(camera.position.x,z))camera.position.z=z;const mx=(camera.position.x+30.825)/62,mz=(camera.position.z+26)/52;$('dot').style.display=mx>=0&&mx<=1&&mz>=0&&mz<=1?'block':'none';$('dot').style.left=mx*100+'%';$('dot').style.top=mz*100+'%'}else controls.update();renderer.render(scene,camera)});
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}window.addEventListener('resize',resize);visibility();orbitHome();$('loading').style.display='none';renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),.05);if(mode==='walk'){camera.rotation.set(pitch,yaw,0,'YXZ');if(selected==='all'){const x=camera.position.x,z=camera.position.z;const elevated=z>-2.5&&z<23.5&&((x>-32.5&&x<-13.5)||(x>15.5&&x<34.5));let groundY=elevated?2.58:.05;for(const sx of gardenStairs.x){if(Math.abs(x-sx)<=gardenStairs.width/2){if(z>=gardenStairs.z0&&z<gardenStairs.z1)groundY=Math.ceil((z-gardenStairs.z0)/(gardenStairs.z1-gardenStairs.z0)*gardenStairs.count)*gardenStairs.top/gardenStairs.count;else if(z>=gardenStairs.z1&&z<=22.4)groundY=gardenStairs.top;}}if(z>=ramp.z0&&z<=ramp.z1&&x>=garage.x1&&x<=ramp.x1)groundY=rampHeight(x);if(z>=garage.z0&&z<=garage.z1&&x>=garage.x0&&x<garage.x1)groundY=garage.floor;if((x>=ramp.x1&&x<=16&&z>=ramp.z0&&z<29)||(z>=28&&z<=33))groundY=ramp.bottom;camera.position.y=groundY+1.65}const f=(keys.w?1:0)-(keys.s?1:0),r=(keys.d?1:0)-(keys.a?1:0),norm=Math.hypot(f,r)||1,speed=(keys.shift?6:2.7)*dt/norm,dx=(-Math.sin(yaw)*f+Math.cos(yaw)*r)*speed,dz=(-Math.cos(yaw)*f-Math.sin(yaw)*r)*speed;const x=Math.max(-70,Math.min(70,camera.position.x+dx)),z=Math.max(-70,Math.min(70,camera.position.z+dz));if(canMove(x,camera.position.z))camera.position.x=x;if(canMove(camera.position.x,z))camera.position.z=z;const mx=(camera.position.x+30.825)/62,mz=(camera.position.z+26)/52;$('dot').style.display=mx>=0&&mx<=1&&mz>=0&&mz<=1?'block':'none';$('dot').style.left=mx*100+'%';$('dot').style.top=mz*100+'%'}else controls.update();renderer.render(scene,camera)});
 }
