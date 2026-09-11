@@ -28,5 +28,6 @@ export function exteriorHeight(x,z){
  if(z>=ramp.z0&&z<=ramp.z1&&x>=garage.x1&&x<=ramp.x1)y=rampHeight(x);
  if(z>=garage.z0&&z<=garage.z1&&x>=garage.x0&&x<garage.x1)y=garage.floor;
  if((x>=access.x0&&x<=access.x1&&z>=access.z0&&z<=access.z1)||(z>=28&&z<=33))y=access.level;
+ if(x>=-35.5&&x<=-10.5&&z>=-8.8&&z<=1.28)y=.06;
  return y;
 }

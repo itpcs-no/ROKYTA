@@ -5,11 +5,15 @@ export function createWalker(){
  const part=(g,geo,m,x,y,z)=>{const p=new T.Mesh(geo,m);p.position.set(x,y,z);p.castShadow=true;p.receiveShadow=true;g.add(p);return p};
  const box=(g,m,x,y,z,w,h,d)=>part(g,new T.BoxGeometry(w,h,d),m,x,y,z);
  const torso=new T.Shape();torso.moveTo(-.16,.8);torso.lineTo(.16,.8);torso.lineTo(.215,1.24);torso.lineTo(-.215,1.24);torso.closePath();const body=part(root,new T.ExtrudeGeometry(torso,{depth:.24,bevelEnabled:true,bevelSegments:1,steps:1,bevelSize:.014,bevelThickness:.014}),shirt,0,0,-.12);
- part(root,new T.CylinderGeometry(.085,.085,.09,16),yellow,0,1.29,0);
- part(root,new T.CylinderGeometry(.165,.165,.29,24),yellow,0,1.47,0);
- part(root,new T.CylinderGeometry(.075,.075,.065,16),yellow,0,1.647,0);
- for(const x of [-.06,.06])part(root,new T.SphereGeometry(.019,10,8),black,x,1.505,-.153);
- const smile=part(root,new T.TorusGeometry(.062,.008,6,16,Math.PI),black,0,1.45,-.164);smile.rotation.z=Math.PI;
+ const skin=mat(0xd4a38e),hair=mat(0x332f29);
+ part(root,new T.CylinderGeometry(.085,.085,.09,16),skin,0,1.29,0);
+ part(root,new T.CylinderGeometry(.165,.165,.32,32),skin,0,1.47,0);
+ // Keep the supplied portrait unchanged; select its face area through texture UVs.
+ const face=new T.TextureLoader().load('assets/avatar-face.png');face.colorSpace=T.SRGBColorSpace;face.offset.set(.15,.12);face.repeat.set(.72,.74);
+ const faceMaterial=new T.MeshStandardMaterial({map:face,roughness:.85});
+ const portrait=part(root,new T.CylinderGeometry(.167,.167,.32,32,1,true,Math.PI-1,2),faceMaterial,0,1.47,0);portrait.name='Face from supplied portrait';
+ part(root,new T.SphereGeometry(.169,24,12,0,Math.PI*2,0,Math.PI/2),hair,0,1.615,0).scale.y=.4;
+ part(root,new T.CylinderGeometry(.075,.075,.045,16),hair,0,1.697,0);
  box(root,blue,0,.77,0,.34,.14,.25);
  const legs=[],arms=[];
  for(const side of [-1,1]){const leg=new T.Group();leg.position.set(side*.1,.73,0);root.add(leg);box(leg,blue,0,-.28,0,.18,.53,.23);box(leg,blue,0,-.66,-.035,.18,.14,.3);legs.push(leg);
