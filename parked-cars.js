@@ -1,13 +1,15 @@
 import * as T from 'three';
-// Eight existing 3.125 m bays, between the columns of the green-roof carport.
+import {parkingBays} from './parking-layout.js';
+import {ramp} from './project-geometry.js';
+// The same eight drivable cars, relocated to the new recessed parking bays.
 export function buildParkedCars(){
- const cars=new T.Group();cars.name='Cars in covered parking';
+ const cars=new T.Group();cars.name='Cars in covered parking';cars.userData.location='Under the courts';
  const rubber=new T.MeshStandardMaterial({color:0x202427,roughness:.92}),trim=new T.MeshStandardMaterial({color:0x30383b,roughness:.62}),rim=new T.MeshStandardMaterial({color:0xb4bcc0,metalness:.75,roughness:.28}),glass=new T.MeshStandardMaterial({color:0x294450,metalness:.32,roughness:.18}),headlight=new T.MeshStandardMaterial({color:0xeaf2ef,emissive:0xb7cbd0,emissiveIntensity:.2}),tail=new T.MeshStandardMaterial({color:0x941f22,roughness:.4});
  function box(g,x,y,z,w,h,d,m){const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;g.add(o);return o}
  function quad(g,pts,m){const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(pts.flat(),3));geo.setIndex([0,1,2,0,2,3]);geo.computeVertexNormals();const o=new T.Mesh(geo,m);o.castShadow=true;o.receiveShadow=true;g.add(o)}
  const paints=[0xe7e8e5,0x555b60,0x272c31,0xd0d1ca,0x344853,0xf0f0e9,0x62696c,0x6f3530];
  for(let i=0;i<8;i++){
-  const car=new T.Group();car.name=`Parked car ${i+1}`;car.position.set(-35.5+(i+.5)*3.125,.06,-1.65);cars.add(car);
+  const bay=parkingBays[i],car=new T.Group();car.name=`Parked car ${i+1}`;car.position.set(bay.x,ramp.bottom,bay.z);cars.add(car);
   const paint=new T.MeshPhysicalMaterial({color:paints[i],metalness:.48,roughness:.24,clearcoat:1,clearcoatRoughness:.14,envMapIntensity:1.2,side:T.DoubleSide});
   box(car,0,.56,0,1.78,.35,4.28,trim);box(car,0,.78,0,1.84,.4,4.38,paint);
   box(car,0,1,-1.5,1.78,.1,1.22,paint);box(car,0,.99,1.68,1.76,.1,.87,paint);

@@ -1,6 +1,7 @@
 // Landscape reconstruction from the three aerial photographs dated 2007.
 // Positions, grading and the smaller court's markings are visual estimates.
 // The proposed building's PDF geometry is intentionally not used as a 2007 survey.
+import {raisedParkingTerrain,courtFrontWalls} from './parking-layout.js';
 export const courtSite={
  level:6.6,ground:6.56,x0:-73,x1:49,z0:33,z1:98,
  plateauX0:-58,plateauX1:29,plateauZ0:47,plateauZ1:73,
@@ -39,7 +40,7 @@ export function courtTerrainHeight(x,z,roadLevel){
   const linear=roadLevel+clamp((z-st.z0)/(st.z1-st.z0))*(s.level-roadLevel);
   y=Math.min(y,linear-.2);
  }
- return y;
+ return raisedParkingTerrain(x,z,roadLevel,y);
 }
 export function courtWalkingHeight(x,z,roadLevel){
  let y=courtTerrainHeight(x,z,roadLevel);if(y===null)return null;
@@ -56,6 +57,6 @@ function nearSegment(x,z,s,r){
 export function courtBarrierAt(x,z){
  const st=courtSite.stairs;
  const sides=[{a:[st.x-st.width/2-.08,st.z0],b:[st.x-st.width/2-.08,st.z1]},{a:[st.x+st.width/2+.08,st.z0],b:[st.x+st.width/2+.08,st.z1]},
-  {a:[-47.5,33.12],b:[st.x-1.3,33.12]},{a:[st.x+1.3,33.12],b:[29,33.12]}];
+  ...courtFrontWalls.map(([a,b])=>({a:[a,33.12],b:[b,33.12]}))];
  return courtFences.some(s=>nearSegment(x,z,s,.22))||courtNets.some(s=>nearSegment(x,z,s,.2))||sides.some(s=>nearSegment(x,z,s,.18));
 }
