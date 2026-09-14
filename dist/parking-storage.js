@@ -34,7 +34,7 @@ export function buildParkingAndStorage(){
   }
   // Guard the exposed edge of the walkable grass roof.
   box(parkingGroup,center,roof+1.02,parking.front+.18,width,.035,.04,metal);
-  for(let x=block.x0;x<=block.x1+.001;x+=width/10)box(parkingGroup,x,roof+.51,parking.front+.18,.035,1.02,.035,metal);
+  const posts=Math.ceil(width/1.5);for(let i=0;i<=posts;i++)box(parkingGroup,block.x0+width*i/posts,roof+.51,parking.front+.18,.035,1.02,.035,metal);
  }
  for(const bay of parkingBays){
   number(parkingGroup,bay.id,bay.x,floor+1.9,parking.back-.15);
