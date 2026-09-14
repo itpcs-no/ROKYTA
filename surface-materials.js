@@ -16,6 +16,8 @@ const specifications={
  concrete:{color:[173,171,159],size:2,roughness:.9,bump:.007},
  paving:{color:[179,178,168],size:2.4,roughness:.84,bump:.01},
  asphalt:{color:[87,91,92],size:2,roughness:.95,bump:.012},
+ courtBlue:{color:[58,121,127],size:2,roughness:.91,bump:.0015},
+ courtRed:{color:[155,94,84],size:2,roughness:.9,bump:.0015},
  grass:{color:[101,119,68],size:5,roughness:1,bump:.045},
  soil:{color:[95,81,60],size:2,roughness:1,bump:.026},
  wood:{color:[153,115,77],size:1.2,roughness:.57,bump:.009},
@@ -41,7 +43,7 @@ function buildTextures(kind){
   }else if(kind==='wood'||kind==='bark'){
    const grain=Math.sin(u*310+Math.sin(v*6.283)*2.5+medium*3);
    variation+=(grain*.035+(broad-.5)*.13)*(kind==='bark'?1.8:1);height=.45+grain*.2;
-  }else if(kind==='roof'||kind==='asphalt'||kind==='soil'){
+  }else if(kind==='roof'||kind==='asphalt'||kind==='soil'||kind.startsWith('court')){
    variation+=(n-.5)*.2+(medium-.5)*.07;height=n*.7+.15;
   }
   const i=(y*size+x)*4;

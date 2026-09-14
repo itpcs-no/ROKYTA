@@ -1,4 +1,5 @@
 // Coordinates traced from 01_1NP and 02_2NP NAVRHOVANY, scale 1:100.
+import {courtWalkingHeight} from './court-layout.js';
 export const pool={x0:-17.838159,x1:-7.858253,z0:-18.826286,z1:-13.846263,bottom:-1.5,water:-.12};
 export const garage={x0:-13.091288,x1:-2.341267,z0:15.503966,z1:23.828992,floor:2.78,doorZ0:17.403992,doorZ1:22.903974,doorHeight:3};
 export const ramp={x0:-1.398225,x1:10.789956,z0:15.878973,z1:23.578978,top:2.78,angle:6};
@@ -29,5 +30,6 @@ export function exteriorHeight(x,z){
  if(z>=garage.z0&&z<=garage.z1&&x>=garage.x0&&x<garage.x1)y=garage.floor;
  if((x>=access.x0&&x<=access.x1&&z>=access.z0&&z<=access.z1)||(z>=28&&z<=33))y=access.level;
  if(x>=-35.5&&x<=-10.5&&z>=-8.8&&z<=1.28)y=.06;
+ const sportsHeight=courtWalkingHeight(x,z,ramp.bottom);if(sportsHeight!==null)y=sportsHeight;
  return y;
 }
