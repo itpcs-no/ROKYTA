@@ -1,5 +1,6 @@
 // Coordinates traced from 01_1NP and 02_2NP NAVRHOVANY, scale 1:100.
 import {courtWalkingHeight} from './court-layout.js';
+import {sitePavedHeight,siteShoulderHeight} from './site-layout.js';
 export const pool={x0:-17.838159,x1:-7.858253,z0:-18.826286,z1:-13.846263,bottom:-1.5,water:-.12};
 export const garage={x0:-13.091288,x1:-2.341267,z0:15.503966,z1:23.828992,floor:2.78,doorZ0:17.403992,doorZ1:22.903974,doorHeight:3};
 export const ramp={x0:-1.398225,x1:10.789956,z0:15.878973,z1:23.578978,top:2.78,angle:6};
@@ -20,6 +21,7 @@ export const gardenStairs={x:[-10.3,12.5],z0:-7.745,z1:-2.8,width:2.1,bottom:0,t
 export const access={x0:ramp.x1,x1:15.25,z0:ramp.z0,z1:28,level:ramp.bottom,pathEnd:13.575};
 export function exteriorHeight(x,z){
  let y=.05;
+ const shoulder=siteShoulderHeight(x,z,ramp.bottom);if(shoulder!==null)y=shoulder;
  if(z>-2.5&&z<23.5&&((x>-32.5&&x<-13.5)||(x>15.5&&x<34.5)))y=2.58;
  for(const sx of gardenStairs.x)if(Math.abs(x-sx)<=gardenStairs.width/2){
   if(z>=gardenStairs.z0&&z<gardenStairs.z1)y=Math.ceil((z-gardenStairs.z0)/(gardenStairs.z1-gardenStairs.z0)*gardenStairs.count)*gardenStairs.top/gardenStairs.count;
@@ -28,8 +30,9 @@ export function exteriorHeight(x,z){
  if(z>=12.025&&z<=13.575&&((x>=-13.5&&x<=-11.35)||(x>=13.55&&x<=15.5)))y=gardenStairs.top;
  if(z>=ramp.z0&&z<=ramp.z1&&x>=garage.x1&&x<=ramp.x1)y=rampHeight(x);
  if(z>=garage.z0&&z<=garage.z1&&x>=garage.x0&&x<garage.x1)y=garage.floor;
- if((x>=access.x0&&x<=access.x1&&z>=access.z0&&z<=access.z1)||(z>=28&&z<=33))y=access.level;
+ if(x>=access.x0&&x<=access.x1&&z>=access.z0&&z<=access.z1)y=access.level;
  if(x>=-35.5&&x<=-10.5&&z>=-8.8&&z<=1.28)y=.06;
  const sportsHeight=courtWalkingHeight(x,z,ramp.bottom);if(sportsHeight!==null)y=sportsHeight;
+ const road=sitePavedHeight(x,z,ramp.bottom);if(road!==null)y=road;
  return y;
 }
