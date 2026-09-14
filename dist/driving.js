@@ -13,12 +13,12 @@ export function createDriving(cars,height,canMove){
   // Sample the body perimeter and centre, not just its centre point.
   for(const u of [-1.05,0,1.05])for(const v of [-2.25,-1.1,0,1.1,2.25]){
    const px=x+u*Math.cos(angle)+v*Math.sin(angle),pz=z-u*Math.sin(angle)+v*Math.cos(angle);
-   if((px>=-35.6&&px<=-10.4&&Math.abs(pz-1.4)<.3)||Array.from({length:9},(_,i)=>-35.5+i*3.125).some(post=>Math.abs(px-post)<.3&&Math.abs(pz+4.7)<.3)||!canMove(px,pz)||Math.abs(height(px,pz)-y)>.3)return false;
+   if(!canMove(px,pz)||Math.abs(height(px,pz)-y)>.3)return false;
   }
   return !cars.children.some(c=>c!==active&&overlaps(probe,c));
  }
  return {get active(){return active},get speed(){return speed},
-  nearest(p){return cars.children.filter(c=>Math.hypot(c.position.x-p.x,c.position.z-p.z)<4).sort((a,b)=>a.position.distanceTo(p)-b.position.distanceTo(p))[0]},
+  nearest(p){return cars.children.filter(c=>Math.hypot(c.position.x-p.x,c.position.z-p.z)<4&&Math.abs(p.y-c.position.y-1.65)<1.2).sort((a,b)=>a.position.distanceTo(p)-b.position.distanceTo(p))[0]},
   enter(car){active=car;speed=0},leave(){active=null;speed=0},
   update(dt,throttle,steer,brake){if(!active)return;
    speed=T.MathUtils.clamp(speed+throttle*5*dt,-3,8);

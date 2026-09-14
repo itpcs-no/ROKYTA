@@ -2,6 +2,7 @@ import * as T from 'three';
 import {surface} from './surface-materials.js';
 import {ramp} from './project-geometry.js';
 import {courtSite,courts,courtFences,courtNets,courtTerrainHeight,courtStairHeight} from './court-layout.js';
+import {hillsideParking,parkingBlockAt,courtFrontWalls} from './parking-layout.js';
 
 export function buildSportsLandscape(){
  const root=new T.Group();root.name='Kopček a kurty podľa fotografií 2007';
@@ -15,15 +16,16 @@ export function buildSportsLandscape(){
  const v=(x,y,z)=>new T.Vector3(x,y,z);
  // One connected height-field. Extra columns along the stairs keep soil out of
  // the tread volume; all court slabs sit within the flat upper terrace.
- const xs=[];for(let x=s.x0;x<=s.x1;x++)xs.push(x);
- xs.push(st.x-st.width/2-.16,st.x+st.width/2+.16);xs.sort((a,b)=>a-b);
- const zs=[];for(let z=s.z0;z<=s.z1;z++)zs.push(z);
+ const xset=new Set();for(let x=s.x0;x<=s.x1;x++)xset.add(x);
+ for(const b of hillsideParking.blocks)for(const x of [b.x0-3.5,b.x0,b.x1,b.x1+3.5])xset.add(x);
+ xset.add(st.x-st.width/2-.16);xset.add(st.x+st.width/2+.16);const xs=[...xset].sort((a,b)=>a-b);
+ const zs=[];for(let z=s.z0;z<=s.z1;z++)zs.push(z);zs.push(hillsideParking.back);zs.sort((a,b)=>a-b);
  const points=[],indices=[];for(const z of zs)for(const x of xs)points.push(x,courtTerrainHeight(x,z,base),z);
  for(let j=0;j<zs.length-1;j++)for(let i=0;i<xs.length-1;i++){const a=j*xs.length+i,b=a+1,c=a+xs.length,d=c+1;indices.push(a,c,b,b,c,d)}
  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(points,3));geo.setIndex(indices);geo.computeVertexNormals();
  const hill=new T.Mesh(geo,grass);hill.name='Continuous graded hill';hill.receiveShadow=true;hill.castShadow=true;root.add(hill);
  // The mound's front meets the existing road without taking over its surface.
- const skirt=[];for(let i=0;i<xs.length-1;i++){const x=xs[i],xx=xs[i+1],a=courtTerrainHeight(x,s.z0,base),b=courtTerrainHeight(xx,s.z0,base);skirt.push(x,-.06,s.z0,xx,b,s.z0,x,a,s.z0,x,-.06,s.z0,xx,-.06,s.z0,xx,b,s.z0)}
+ const skirt=[];for(let i=0;i<xs.length-1;i++){const x=xs[i],xx=xs[i+1];if(parkingBlockAt((x+xx)/2,s.z0))continue;const a=courtTerrainHeight(x,s.z0,base),b=courtTerrainHeight(xx,s.z0,base);skirt.push(x,-.06,s.z0,xx,b,s.z0,x,a,s.z0,x,-.06,s.z0,xx,-.06,s.z0,xx,b,s.z0)}
  const sg=new T.BufferGeometry();sg.setAttribute('position',new T.Float32BufferAttribute(skirt,3));sg.computeVertexNormals();const soil=new T.Mesh(sg,surface('soil'));root.add(soil);
  // Continuous solid stair profile rather than disconnected floating treads.
  function stairSolid(x,width,parapet=0){
@@ -39,7 +41,11 @@ export function buildSportsLandscape(){
   tube(v(x,base+1.02,st.z0),v(x,level+1.02,st.z1));
   for(let i=0;i<=6;i++){const z=st.z0+i*(st.z1-st.z0)/6,y=courtStairHeight(z,base);tube(v(x,y+.2,z),v(x,base+1.02+(z-st.z0)/(st.z1-st.z0)*(level-base),z),.024)}
  }
- for(const [a,b] of [[-47.5,st.x-1.3],[st.x+1.3,29]])box(root,(a+b)/2,base+.32,s.z0+.12,b-a,.64,.24,plaster);
+ for(const [a,b] of courtFrontWalls){
+  const vertices=[],faces=[],n=Math.ceil((b-a)*2);
+  for(let i=0;i<=n;i++){const x=a+(b-a)*i/n,top=Math.max(base+.64,courtTerrainHeight(x,s.z0,base)+.04);vertices.push(x,-.06,s.z0,x,top,s.z0,x,-.06,s.z0+.24,x,top,s.z0+.24);if(i){const k=(i-1)*4,q=i*4;faces.push(k,k+1,q,k+1,q+1,q,k+1,k+3,q+1,k+3,q+3,q+1,k+2,q+2,k+3,k+3,q+2,q+3)}}
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(vertices,3));g.setIndex(faces);g.computeVertexNormals();const m=plaster.clone();m.side=T.DoubleSide;const wall=new T.Mesh(g,m);wall.name='Oporný múr s vjazdmi pod kurty';wall.castShadow=true;wall.receiveShadow=true;root.add(wall);
+ }
  // Open diamond mesh: it remains visually light and never casts a solid wall shadow.
  const pixels=new Uint8Array(32*32*4);for(let y=0;y<32;y++)for(let x=0;x<32;x++){const on=Math.abs(x-y)<1.5||Math.abs(x+y-31)<1.5;const k=(y*32+x)*4;pixels[k]=pixels[k+1]=pixels[k+2]=on?255:0;pixels[k+3]=255}
  const meshMap=new T.DataTexture(pixels,32,32,T.RGBAFormat);meshMap.wrapS=meshMap.wrapT=T.RepeatWrapping;meshMap.magFilter=T.LinearFilter;meshMap.minFilter=T.LinearMipmapLinearFilter;meshMap.generateMipmaps=true;meshMap.needsUpdate=true;

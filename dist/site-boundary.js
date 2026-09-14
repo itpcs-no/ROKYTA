@@ -32,7 +32,7 @@ export function buildSiteBoundary(){
  solidPolygon([[-37,-49],[-35,-49],[-35,-43.5],[-37,-43.5]],.06,paving,'Peší výstup z areálu');
  // Graded grass shoulders: no suspended asphalt sheets or exposed open undersides.
  const tp=[],ti=[];
- for(let x=-49;x<59;x+=.6)for(let z=-66;z<71;z+=.6){
+ for(let x=-58;x<59;x+=.6)for(let z=-66;z<71;z+=.6){
   const v=[[x,z],[x+.6,z],[x+.6,z+.6],[x,z+.6]],ys=v.map(([x,z])=>siteShoulderHeight(x,z,ramp.bottom));
   if(ys.some(y=>y===null))continue;const n=tp.length/3;v.forEach(([x,z],i)=>tp.push(x,ys[i],z));ti.push(n,n+2,n+1,n,n+3,n+2);
  }

@@ -20,7 +20,7 @@ function sample(points){
 const roadCache=new Map();
 export function siteRoads(level){
  if(!roadCache.has(level))roadCache.set(level,[
-  {name:'Cesta od brány okolo záhrady',width:5,points:sample([[48.75,30.5,level],[39,30.5,level],[16,30.5,level],[-22,30.5,level],[-34,30.5,level],[-41,27,1.35],[-43,18,.95],[-42,4,.34],[-42,-7.8,.06],[-42,-19,.06],[-42,-31,.06]])},
+  {name:'Cesta od brány okolo záhrady',width:5,points:sample([[48.75,30.5,level],[39,30.5,level],[16,30.5,level],[-22,30.5,level],[-37,30.5,level],[-46.5,30.5,level],[-51,27,1.35],[-51,18,.95],[-46,4,.34],[-42,-7.8,.06],[-42,-19,.06],[-42,-31,.06]])},
   {name:'Vonkajšia príjazdová cesta',width:5.5,points:sample([[51.5,-65,.06],[51.5,-42,.06],[51.5,-15,.38],[51.5,14,level],[51.5,26,level],[51.5,34,level],[51.5,43,level],[51.5,70,.06]])}
  ]);
  return roadCache.get(level);
