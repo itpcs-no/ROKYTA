@@ -9,7 +9,7 @@ export function createDriving(cars,height,canMove){
  let active=null,speed=0;
  function allowed(x,z,angle){
   const y=height(x,z),probe={position:{x,z},rotation:{y:angle}};
-  if(Math.abs(x)>48||Math.abs(z)>42)return false;
+  if(Math.abs(x)>76||Math.abs(z)>105)return false;
   // Sample the body perimeter and centre, not just its centre point.
   for(const u of [-1.05,0,1.05])for(const v of [-2.25,-1.1,0,1.1,2.25]){
    const px=x+u*Math.cos(angle)+v*Math.sin(angle),pz=z-u*Math.sin(angle)+v*Math.cos(angle);

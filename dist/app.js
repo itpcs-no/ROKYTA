@@ -2,6 +2,7 @@ import {createDriving} from './driving.js';
 import {surface,glassMaterial,finishSurfaces} from './surface-materials.js';
 import {addDaylight} from './daylight.js';
 import {courtSite,courtBarrierAt} from './court-layout.js';
+import {siteBarrierAt} from './site-layout.js';
 import * as T from 'three';
 import {createWalker} from './avatar.js';
 import {garage,ramp,pool,rampHeight,levels,slabThickness,footprints,gardenStairs,exteriorHeight} from './project-geometry.js';
@@ -75,6 +76,7 @@ const walker=createWalker();scene.add(walker.root);walker.root.visible=false;con
 let selected='all', mode='orbit', yaw=0,pitch=-.45,walkDistance=5.5,keys={},drag=null;const clock=new T.Clock();
 function setDoors(){renderer.shadowMap.needsUpdate=true;const shutter=exterior.userData.garageDoor;shutter.scale.y=$('doors').checked?.045:1;shutter.position.y=(garage.floor+garage.doorHeight)*(1-shutter.scale.y);doorPivots.forEach(p=>p.rotation.y=$('doors').checked?p.userData.opened:p.userData.closed)}
 $('doors').onchange=setDoors;
+$('gate').onchange=()=>{exterior.userData.site.userData.setGate($('gate').checked);renderer.shadowMap.needsUpdate=true};
 function status(){walker.root.visible=mode==='walk'&&!driving.active&&$('figure').checked;$('startWalk').textContent=mode==='walk'?'Ukončiť prechádzku':'Prejsť sa s panáčikom'; $('status').textContent=`${selected==='all'?'Celá budova':`${selected+1}. NP`} · ${mode==='walk'?'WASD · pohyb':'obhliadka'}`;$('orbit').classList.toggle('active',mode==='orbit');$('walk').classList.toggle('active',mode==='walk');document.body.classList.toggle('walking',mode==='walk') }
 function visibility(){renderer.shadowMap.needsUpdate=true;exterior.visible=selected==='all'||mode==='walk';ground.visible=selected!=='all'&&selected!==0;grid.visible=selected!=='all'&&selected!==0;renderer.clippingPlanes=$('cutaway').checked?[new T.Plane(new T.Vector3(0,-1,0),2.55)]:[];for(let f=0;f<4;f++){groups[f].visible=selected==='all'||selected===f||(mode==='walk'&&f<selected);groups[f].userData.plan.visible=$('plan').checked&&selected===f} $('maptitle').textContent=`${(selected==='all'?1:selected)+1}. NP`;$('mapimg').src=`assets/plan${(selected==='all'?1:selected)+1}.png`;status()}
 function orbitHome(top=false){driving.leave();jumpOffset=jumpVelocity=0;mode='orbit';visibility();controls.enabled=true;const y=selected==='all'?4:data[selected].base;camera.up.set(0,1,0);camera.position.set(top?0:61,top?95:40,top?-.01:63);controls.target.set(0,y,-1);controls.update();$('dot').style.display='none';$('hint').textContent='Ťahaním otáčaj model. Kolieskom približuj. Pravým tlačidlom posúvaj.';status()}
@@ -85,6 +87,9 @@ $('poolView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').ch
 $('garageView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;visibility();orbitHome();camera.position.set(20,10,35);controls.target.set(-4,3,20);controls.update()};
 $('courtsView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();camera.position.set(86,57,-60);controls.target.set(-14,3.8,29);controls.update()};
 $('courtsWalk').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(courtSite.stairs.x,32,true);yaw=Math.PI;pitch=-.25};
+$('entranceView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();camera.position.set(85,28,7);controls.target.set(36,2,26);controls.update()};
+$('serviceView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();camera.position.set(-78,34,-55);controls.target.set(-33,1,-12);controls.update()};
+$('entranceWalk').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(49,30.5,true);yaw=Math.PI/2;pitch=-.3};
 $('map').onclick=e=>{const r=$('map').getBoundingClientRect();walkAt((e.clientX-r.left)/r.width*62-30.825,(e.clientY-r.top)/r.height*52-26);$('panel').classList.remove('open')};
 const canvas=renderer.domElement;canvas.addEventListener('pointerdown',e=>{if(mode==='walk'){drag={x:e.clientX,y:e.clientY,id:e.pointerId};canvas.setPointerCapture(e.pointerId)}});canvas.addEventListener('pointermove',e=>{if(drag&&mode==='walk'){yaw-=(e.clientX-drag.x)*.004;pitch=Math.max(-1.35,Math.min(1.35,pitch-(e.clientY-drag.y)*.004));drag.x=e.clientX;drag.y=e.clientY}});canvas.addEventListener('pointerup',()=>drag=null);canvas.addEventListener('pointercancel',()=>drag=null);canvas.addEventListener('lostpointercapture',()=>drag=null);canvas.addEventListener('contextmenu',e=>{if(mode==='walk')e.preventDefault()});canvas.addEventListener('wheel',e=>{if(mode==='walk'&&$('figure').checked){e.preventDefault();walkDistance=Math.max(2,Math.min(10,walkDistance*Math.exp(e.deltaY*.001))) }},{passive:false});
 const cars=exterior.getObjectByName('Cars in covered parking');
@@ -107,6 +112,7 @@ function inside(x,z,p){let c=false;for(let i=0,j=p.length-1;i<p.length;j=i++){co
 function canMove(x,z){
  if($('free').checked)return true;
  if(selected==='all'&&courtBarrierAt(x,z))return false;
+ if(selected==='all'&&siteBarrierAt(x,z,$('gate').checked))return false;
  const floor=selected==='all'?(nav.y-1.65>2.5?1:0):selected;
  if(selected==='all'&&!$('doors').checked&&Math.abs(x-garage.x1)<.2&&z>garage.doorZ0&&z<garage.doorZ1)return false;
  if(selected!=='all'){
