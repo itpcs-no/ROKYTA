@@ -1,17 +1,20 @@
 import * as T from 'three';
 import {buildParkedCars} from './parked-cars.js';
+import {surface,glassMaterial} from './surface-materials.js';
+import {createPlanting} from './planting.js';
 import {garage,ramp,pool,levels,footprints,gardenStairs,access} from './project-geometry.js';
 // Visual reconstruction of the 1 August 2018 references, fitted to the PDF footprint.
 // Facade opening rhythm and terrain are estimates, not measured survey geometry.
 export function buildExterior(){
  const root=new T.Group();root.name='Exterior details and project terrain';const roofs=[];
  const material=(color,roughness=.85)=>new T.MeshStandardMaterial({color,roughness});
- const white=material(0xf0f0ec),stone=material(0x45494a),roof=material(0x30383d),paving=material(0xa2a6a3),frame=material(0x252e32,.4),lawn=material(0x638657),earth=material(0x7e8870),wood=material(0x785a40),leaf=material(0x3f6947),glass=new T.MeshStandardMaterial({color:0x74949f,roughness:.18,metalness:.32,transparent:true,opacity:.72}),railglass=new T.MeshStandardMaterial({color:0x98b4b9,transparent:true,opacity:.25,roughness:.2});
- const box=(g,x,y,z,w,h,d,m=white)=>{if(w<=0||h<=0||d<=0)throw Error('Nonpositive exterior dimensions');const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;g.add(o);return o};
+ const white=surface('plaster'),stone=surface('stone'),roof=surface('roof'),paving=surface('paving'),frame=material(0x31383b,.3),lawn=surface('grass'),earth=surface('concrete'),wood=surface('wood'),railglass=glassMaterial(true);frame.metalness=.7;
+ const box=(g,x,y,z,w,h,d,m=white)=>{if(w<=0||h<=0||d<=0)throw Error('Nonpositive exterior dimensions');const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=!m.transparent;o.receiveShadow=true;g.add(o);return o};
  // Each elevation is assembled around actual openings, so glazing is not pasted on a solid wall.
  function facade(){} // The real PDF walls/windows are rendered by the shared floor groups.
  function rail(axis,fixed,a,b,y){const g=new T.Group();root.add(g);if(axis==='z'){g.rotation.y=-Math.PI/2;g.position.x=fixed}else g.position.z=fixed;box(g,(a+b)/2,y+.57,0,b-a,.8,.025,railglass);box(g,(a+b)/2,y+1.02,0,b-a,.035,.045,frame);const count=Math.ceil((b-a)/1.5);for(let i=0;i<=count;i++)box(g,a+(b-a)*i/count,y+.51,0,.035,1.02,.035,frame)}
- function cap(x0,x1,z0,z1,y){const start=root.children.length;box(root,(x0+x1)/2,y-.12,(z0+z1)/2,x1-x0,.42,z1-z0,roof);for(const z of [z0,z1])box(root,(x0+x1)/2,y+.2,z,x1-x0,.4,.18);for(const x of [x0,x1])box(root,x,y+.2,(z0+z1)/2,.18,.4,z1-z0);roofs.push(...root.children.slice(start))}
+ const coping=material(0xb6b8b3,.34);coping.metalness=.58;
+ function cap(x0,x1,z0,z1,y){const start=root.children.length;box(root,(x0+x1)/2,y-.12,(z0+z1)/2,x1-x0,.42,z1-z0,roof);for(const z of [z0,z1]){box(root,(x0+x1)/2,y+.2,z,x1-x0,.4,.18);box(root,(x0+x1)/2,y+.408,z,x1-x0+.08,.024,.23,coping)}for(const x of [x0,x1]){box(root,x,y+.2,(z0+z1)/2,.18,.4,z1-z0);box(root,x,y+.408,(z0+z1)/2,.23,.024,z1-z0+.08,coping)}roofs.push(...root.children.slice(start))}
  function balcony(axis,fixed,a,b,y,depth=1.7,sign=1){const center=fixed+sign*depth/2;if(axis==='x'){box(root,(a+b)/2,y-.1,center,b-a,.2,depth);box(root,(a+b)/2,y+.13,fixed+sign*depth,b-a,.42,.16);rail('x',fixed+sign*depth,a,b,y+.26);rail('z',a,Math.min(fixed,fixed+sign*depth),Math.max(fixed,fixed+sign*depth),y+.26);rail('z',b,Math.min(fixed,fixed+sign*depth),Math.max(fixed,fixed+sign*depth),y+.26)}else{box(root,center,y-.1,(a+b)/2,depth,.2,b-a);box(root,fixed+sign*depth,y+.13,(a+b)/2,.16,.42,b-a);rail('z',fixed+sign*depth,a,b,y+.26);rail('x',a,Math.min(fixed,fixed+sign*depth),Math.max(fixed,fixed+sign*depth),y+.26);rail('x',b,Math.min(fixed,fixed+sign*depth),Math.max(fixed,fixed+sign*depth),y+.26)}}
  // Long southern elevation, continuous balconies and recessed third storey.
  const bays=[-25.5,-20.7,-15.9,-11.1,-6.3,-1.5,3.3,8.1,12.9,17.7,22.5,26.4];
@@ -60,10 +63,15 @@ export function buildExterior(){
  const rg=new T.BufferGeometry();rg.setAttribute('position',new T.Float32BufferAttribute(vertices,3));rg.computeVertexNormals();const rm=paving.clone();rm.side=T.DoubleSide;const rampMesh=new T.Mesh(rg,rm);rampMesh.receiveShadow=true;rampMesh.castShadow=true;root.add(rampMesh);
  const drive=box(root,(access.x0+access.x1)/2,access.level/2,(access.z0+access.z1)/2,access.x1-access.x0,access.level,access.z1-access.z0,paving);drive.name='Unobstructed garage approach';
  // Lower drive, two planted terraces, grass-roof parking below the western terrace.
- const groundShape=new T.Shape();groundShape.moveTo(-56,52);groundShape.lineTo(56,52);groundShape.lineTo(56,-52);groundShape.lineTo(-56,-52);groundShape.closePath();const hole=new T.Path();hole.moveTo(pool.x0,-pool.z0);hole.lineTo(pool.x1,-pool.z0);hole.lineTo(pool.x1,-pool.z1);hole.lineTo(pool.x0,-pool.z1);hole.closePath();groundShape.holes.push(hole);const groundGeo=new T.ShapeGeometry(groundShape);groundGeo.rotateX(-Math.PI/2);const groundMesh=new T.Mesh(groundGeo,lawn);groundMesh.position.y=-.06;groundMesh.receiveShadow=true;root.add(groundMesh);box(root,0,-.04,-7.8,74,.08,4.3,paving);box(root,0,ramp.bottom/2,30.5,95,ramp.bottom,5,paving);
+ const groundShape=new T.Shape();groundShape.moveTo(-700,700);groundShape.lineTo(700,700);groundShape.lineTo(700,-700);groundShape.lineTo(-700,-700);groundShape.closePath();const hole=new T.Path();hole.moveTo(pool.x0,-pool.z0);hole.lineTo(pool.x1,-pool.z0);hole.lineTo(pool.x1,-pool.z1);hole.lineTo(pool.x0,-pool.z1);hole.closePath();groundShape.holes.push(hole);const groundGeo=new T.ShapeGeometry(groundShape);groundGeo.rotateX(-Math.PI/2);const groundMesh=new T.Mesh(groundGeo,lawn);groundMesh.position.y=-.06;groundMesh.receiveShadow=true;root.add(groundMesh);box(root,0,-.04,-7.8,74,.08,4.3,paving);box(root,0,ramp.bottom/2,30.5,95,ramp.bottom,5,surface('asphalt'));
  for(const side of [-1,1]){const x=side<0?-23:25;box(root,x,1.24,side<0?12.505:10.5,19,2.48,side<0?21.99:26,earth);box(root,x,2.51,10.5,19,.08,26,lawn);box(root,x,1.22,side<0?1.51:-2.5,19,2.48,.23,white);box(root,x,2.525,12.8,19,.1,1.5,paving);box(root,x,2.51,22.4,19,.13,4,paving)}
  box(root,-23,.0,-4.8,25,.12,8,paving);box(root,-23,2.35,-1.6,25,.22,6.2,white);box(root,-23,2.49,-1.6,25,.08,6.2,lawn);box(root,-23,1.1,1.4,25,2.3,.22,white);for(let x=-35.5;x<=-10.5;x+=3.125)box(root,x,1.1,-4.7,.25,2.3,.25,white);
  root.add(buildParkedCars());
+ const markings=material(0xd4d2c5,.95);
+ for(let i=0;i<=8;i++)box(root,-35.5+i*3.125,.063,-1.95,.065,.004,5.2,markings);
+ // Flush drainage grating at the garage threshold; no new obstacle on the ramp.
+ box(root,garage.x1+.22,garage.floor+.002,gz,.24,.006,5.48,frame);
+ for(let z=garage.doorZ0+.07;z<garage.doorZ1;z+=.09)box(root,garage.x1+.22,garage.floor+.008,z,.23,.008,.023,coping);
  // Garden paths, retaining edges, stair links and planted borders.
  // One watertight stepped solid per flight, exactly meeting the landing.
  for(const x of gardenStairs.x){
@@ -75,9 +83,12 @@ export function buildExterior(){
   for(const z of [12.8]){const a=x<0?-13.5:x+width/2,b=x<0?x-width/2:15.5;box(root,(a+b)/2,(top-.18)/2,z,b-a,top-.18,1.55,earth);box(root,(a+b)/2,top-.09,z,b-a,.18,1.55,paving)}
  }
  for(const x of [-33,35]){box(root,x,1.3,10.6,.22,2.6,26,white)}
- function shrub(x,z,y=2.6,r=.45){const o=new T.Mesh(new T.IcosahedronGeometry(r,1),leaf);o.position.set(x,y+r*.7,z);o.scale.y=.75;root.add(o);o.castShadow=true}
- for(let x=-32;x<34;x+=1.2){if(x<-11||x>13){shrub(x,21);shrub(x,-1.2)}}
- for(const [x,z] of [[-29,16],[-18,17],[23,17],[31,10]]){box(root,x,4.05,z,.22,3,.22,wood);for(const [dx,dy,dz] of [[0,0,0],[-.8,-.3,.2],[.8,-.2,-.4]]){const o=new T.Mesh(new T.IcosahedronGeometry(1.7,1),leaf);o.position.set(x+dx,5.9+dy,z+dz);root.add(o);o.castShadow=true}}
+ const planting=createPlanting();
+ for(let x=-32;x<34;x+=1.2){if(x<-11||x>13){planting.shrub(x,21);planting.shrub(x,-1.2);planting.tuft(x+.4,20.6,2.56,.16)}}
+ for(const [x,z] of [[-29,16],[-18,17],[23,17],[31,10]]){planting.tree(x,z);for(let i=0;i<16;i++){const a=i*2.399;planting.tuft(x+Math.cos(a)*.55,z+Math.sin(a)*.55,2.55,.22)}}
+ // Illustrative distant planting softens the horizon, outside the project plot.
+ for(let i=0;i<40;i++){const a=i*2.399,r=90+(i%7)*11;planting.tree(Math.cos(a)*r,Math.sin(a)*r,-.06,1+(i%4)*.18,true)}
+ root.add(planting.finish());
  // Compact timber play structures visible in the landscape references.
  for(const x of [-24,26]){box(root,x,2.59,15,4.5,.09,4,roof);for(const dx of [-.75,.75])for(const dz of [-.6,.6])box(root,x+dx,3.65,15+dz,.12,2.1,.12,wood);box(root,x,4.55,15,1.8,.12,1.6,wood);for(let i=0;i<5;i++)box(root,x,2.9+i*.3,16-i*.15,1,.08,.15,wood)}
 

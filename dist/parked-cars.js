@@ -8,7 +8,7 @@ export function buildParkedCars(){
  const paints=[0xe7e8e5,0x555b60,0x272c31,0xd0d1ca,0x344853,0xf0f0e9,0x62696c,0x6f3530];
  for(let i=0;i<8;i++){
   const car=new T.Group();car.name=`Parked car ${i+1}`;car.position.set(-35.5+(i+.5)*3.125,.06,-1.65);cars.add(car);
-  const paint=new T.MeshStandardMaterial({color:paints[i],metalness:.4,roughness:.32,side:T.DoubleSide});
+  const paint=new T.MeshPhysicalMaterial({color:paints[i],metalness:.48,roughness:.24,clearcoat:1,clearcoatRoughness:.14,envMapIntensity:1.2,side:T.DoubleSide});
   box(car,0,.56,0,1.78,.35,4.28,trim);box(car,0,.78,0,1.84,.4,4.38,paint);
   box(car,0,1,-1.5,1.78,.1,1.22,paint);box(car,0,.99,1.68,1.76,.1,.87,paint);
   const windshield=glass.clone();windshield.side=T.DoubleSide;
@@ -21,8 +21,8 @@ export function buildParkedCars(){
    box(car,side*.947,1.08,-.74,.17,.105,.24,paint);
    box(car,side*.926,.9,.52,.024,.026,.18,rim);
    for(const z of [-1.35,1.35]){
-    const tire=new T.Mesh(new T.CylinderGeometry(.3,.3,.21,16),rubber);tire.rotation.z=Math.PI/2;tire.position.set(side*.88,.3,z);tire.castShadow=true;car.add(tire);
-    const hub=new T.Mesh(new T.CylinderGeometry(.185,.185,.023,12),rim);hub.rotation.z=Math.PI/2;hub.position.set(side*1.0,.3,z);car.add(hub);
+    const tire=new T.Mesh(new T.CylinderGeometry(.3,.3,.21,32),rubber);tire.rotation.z=Math.PI/2;tire.position.set(side*.88,.3,z);tire.castShadow=true;car.add(tire);
+    const hub=new T.Mesh(new T.CylinderGeometry(.185,.185,.023,24),rim);hub.rotation.z=Math.PI/2;hub.position.set(side*1.0,.3,z);car.add(hub);
    }
    box(car,side*.61,.85,-2.205,.48,.135,.032,headlight);box(car,side*.66,.86,2.205,.35,.16,.032,tail);
   }
