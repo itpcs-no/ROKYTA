@@ -29,6 +29,6 @@ export function addDaylight(scene,renderer){
  scene.add(new T.HemisphereLight(0xdce8f0,0x827861,.65));
  const sun=new T.DirectionalLight(0xffedda,3.05);sun.position.copy(sunDirection).multiplyScalar(90);sun.target.position.set(0,0,-2);scene.add(sun,sun.target);sun.castShadow=true;
  const shadowSize=innerWidth<800?2048:4096;sun.shadow.mapSize.set(shadowSize,shadowSize);sun.shadow.bias=-.00008;sun.shadow.normalBias=.028;sun.shadow.radius=3;
- Object.assign(sun.shadow.camera,{left:-59,right:59,top:51,bottom:-51,near:.5,far:190});sun.shadow.camera.updateProjectionMatrix();
+ Object.assign(sun.shadow.camera,{left:-90,right:90,top:75,bottom:-75,near:.5,far:230});sun.shadow.camera.updateProjectionMatrix();
  return {sky,sun};
 }

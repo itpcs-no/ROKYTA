@@ -2,6 +2,8 @@ import * as T from 'three';
 import {buildParkedCars} from './parked-cars.js';
 import {surface,glassMaterial} from './surface-materials.js';
 import {createPlanting} from './planting.js';
+import {buildSportsLandscape} from './sports-landscape.js';
+import {courtTerrainHeight} from './court-layout.js';
 import {garage,ramp,pool,levels,footprints,gardenStairs,access} from './project-geometry.js';
 // Visual reconstruction of the 1 August 2018 references, fitted to the PDF footprint.
 // Facade opening rhythm and terrain are estimates, not measured survey geometry.
@@ -87,8 +89,10 @@ export function buildExterior(){
  for(let x=-32;x<34;x+=1.2){if(x<-11||x>13){planting.shrub(x,21);planting.shrub(x,-1.2);planting.tuft(x+.4,20.6,2.56,.16)}}
  for(const [x,z] of [[-29,16],[-18,17],[23,17],[31,10]]){planting.tree(x,z);for(let i=0;i<16;i++){const a=i*2.399;planting.tuft(x+Math.cos(a)*.55,z+Math.sin(a)*.55,2.55,.22)}}
  // Illustrative distant planting softens the horizon, outside the project plot.
- for(let i=0;i<40;i++){const a=i*2.399,r=90+(i%7)*11;planting.tree(Math.cos(a)*r,Math.sin(a)*r,-.06,1+(i%4)*.18,true)}
+ for(let i=0;i<40;i++){const a=i*2.399,r=90+(i%7)*11,x=Math.cos(a)*r,z=Math.sin(a)*r;planting.tree(x,z,courtTerrainHeight(x,z,ramp.bottom)??-.06,1+(i%4)*.18,true)}
+ for(const [x,z] of [[-64,59],[-64,76],[-49,80],[-27,82],[-7,82],[16,79],[33,72],[36,53]])planting.tree(x,z,courtTerrainHeight(x,z,ramp.bottom)??-.06,.9,true);
  root.add(planting.finish());
+ root.add(buildSportsLandscape());
  // Compact timber play structures visible in the landscape references.
  for(const x of [-24,26]){box(root,x,2.59,15,4.5,.09,4,roof);for(const dx of [-.75,.75])for(const dz of [-.6,.6])box(root,x+dx,3.65,15+dz,.12,2.1,.12,wood);box(root,x,4.55,15,1.8,.12,1.6,wood);for(let i=0;i<5;i++)box(root,x,2.9+i*.3,16-i*.15,1,.08,.15,wood)}
 
