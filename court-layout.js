@@ -35,12 +35,13 @@ export function courtTerrainHeight(x,z,roadLevel){
  if(z<s.plateauZ0)y=road*(1-rise)+y*rise;
  // Shallow irregularities belong to the slopes, not beneath the level courts.
  if(rise>0&&rise<1)y+=Math.sin(x*.23)*Math.sin(z*.31)*.13*Math.sin(rise*Math.PI);
+ y=raisedParkingTerrain(x,z,roadLevel,y);
  const st=s.stairs;
  if(Math.abs(x-st.x)<=st.width/2+.16&&z<=49.35){
   const linear=roadLevel+clamp((z-st.z0)/(st.z1-st.z0))*(s.level-roadLevel);
   y=Math.min(y,linear-.2);
  }
- return raisedParkingTerrain(x,z,roadLevel,y);
+ return y;
 }
 export function courtWalkingHeight(x,z,roadLevel){
  let y=courtTerrainHeight(x,z,roadLevel);if(y===null)return null;

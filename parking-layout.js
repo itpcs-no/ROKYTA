@@ -1,9 +1,9 @@
-// User-requested concept: relocate eight bays into the bank below the courts.
+// User-requested concept: recessed parking across the entire court frontage.
 // These new parking/storage volumes are not part of the supplied PDF proposal.
 export const hillsideParking={front:33,back:40.5,clearance:2.6,roof:.28,soil:.22,post:.26,
- blocks:[{x0:-45.5,x1:-31.5,count:4},{x0:-19.5,x1:-5.5,count:4}]};
+ blocks:[{x0:-47.5,x1:-.3,count:14},{x0:2.3,x1:29,count:8}]};
 export const parkingBays=hillsideParking.blocks.flatMap((b,block)=>Array.from({length:b.count},(_,i)=>({
- id:block*4+i+1,x:b.x0+(i+.5)*(b.x1-b.x0)/b.count,z:37,width:(b.x1-b.x0)/b.count
+ id:hillsideParking.blocks.slice(0,block).reduce((sum,row)=>sum+row.count,0)+i+1,x:b.x0+(i+.5)*(b.x1-b.x0)/b.count,z:37,width:(b.x1-b.x0)/b.count
 })));
 export const cellars={x0:-35.5,x1:-10.5,front:-4.7,back:1.4,floor:.06,ceiling:2.24,count:8,pitch:3.125,doorWidth:.96,doorHeight:2.02};
 export const cellarDoors=Array.from({length:cellars.count},(_,i)=>({x:cellars.x0+(i+.5)*cellars.pitch-cellars.doorWidth/2,z:cellars.front,width:cellars.doorWidth,id:i+1}));
