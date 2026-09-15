@@ -5,7 +5,8 @@ import {ramp,exteriorHeight} from './project-geometry.js';
 import {courtTerrainHeight} from './court-layout.js';
 import {entrance,serviceHouse,serviceShed,servicePaving,siteRoads,siteShoulderHeight,boundarySegments} from './site-layout.js';
 import {homeRoads} from './homes-layout.js';
-import {subtractTopSurfaces,roadOutline,roadEdges} from './surface-geometry.js';
+import {wellnessOutline,wellnessBeds} from './wellness-layout.js';
+import {subtractTopSurfaces,roadOutline,roadEdges,rectOutline} from './surface-geometry.js';
 
 export function buildSiteBoundary(){
  const root=new T.Group();root.name='Príjazd, obvod areálu a vedľajšie objekty';
@@ -41,7 +42,8 @@ export function buildSiteBoundary(){
   const corners=[vertex(i,j),vertex(i+1,j),vertex(i+1,j+1),vertex(i,j+1)];
   if(corners.some(v=>v===null))continue;const [a,b,c,d]=corners;ti.push(a,c,b,a,d,c);
  }
- mesh(tp,ti,grass,'Trávnaté svahy pri príjazde').geometry.userData.uvProjection='xz';
+ const shoulders=mesh(tp,ti,grass,'Trávnaté svahy pri príjazde');shoulders.geometry.userData.uvProjection='xz';
+ subtractTopSurfaces(shoulders,[wellnessOutline,...wellnessBeds.map(rectOutline)]);
  // Wall bases follow terrain in short panels; overlapping footings prevent gaps.
  const terrain=(x,z)=>Math.max(-.06,courtTerrainHeight(x,z,ramp.bottom)??exteriorHeight(x,z)-.02);
  const bars=new Map();

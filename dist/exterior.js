@@ -6,9 +6,11 @@ import {buildSportsLandscape} from './sports-landscape.js';
 import {buildSiteBoundary} from './site-boundary.js';
 import {buildParkingAndStorage} from './parking-storage.js';
 import {buildPhotovoltaics} from './photovoltaics.js';
+import {buildOutdoorWellness} from './outdoor-wellness.js';
+import {wellnessOutline,wellnessBeds} from './wellness-layout.js';
 import {courtSite,courtTerrainHeight} from './court-layout.js';
 import {subtractTopSurfaces,rectOutline} from './surface-geometry.js';
-import {garage,ramp,pool,levels,footprints,gardenStairs,access} from './project-geometry.js';
+import {garage,ramp,levels,footprints,gardenStairs,access} from './project-geometry.js';
 // Visual reconstruction of the 1 August 2018 references, fitted to the PDF footprint.
 // Facade opening rhythm and terrain are estimates, not measured survey geometry.
 export function buildExterior(){
@@ -72,7 +74,7 @@ export function buildExterior(){
  const groundShape=new T.Shape();groundShape.moveTo(-700,700);groundShape.lineTo(700,700);groundShape.lineTo(700,-700);groundShape.lineTo(-700,-700);groundShape.closePath();
  // The graded hill replaces this part of the ground, including its outer edge.
  // Keeping the original plane below it produced coplanar grass triangles.
- for(const rect of [pool,courtSite]){const hole=new T.Path();rectOutline(rect).forEach(([x,z],i)=>i?hole.lineTo(x,-z):hole.moveTo(x,-z));hole.closePath();groundShape.holes.push(hole)}
+ for(const points of [rectOutline(courtSite),wellnessOutline,...wellnessBeds.map(rectOutline)]){const hole=new T.Path();points.forEach(([x,z],i)=>i?hole.lineTo(x,-z):hole.moveTo(x,-z));hole.closePath();groundShape.holes.push(hole)}
  const groundGeo=new T.ShapeGeometry(groundShape);groundGeo.rotateX(-Math.PI/2);groundGeo.userData.uvProjection='xz';const groundMesh=new T.Mesh(groundGeo,lawn);groundMesh.position.y=-.06;groundMesh.receiveShadow=true;groundMesh.name='Ground outside the graded hill';root.add(groundMesh);
  const lowerPath=box(root,0,-.01,-7.8,74,.14,4.3,paving);lowerPath.name='Lower garden walkway';
  subtractTopSurfaces(lowerPath,[rectOutline({x0:-35.5,x1:-10.5,z0:-8.8,z1:-.8})]);
@@ -103,9 +105,10 @@ export function buildExterior(){
  root.add(planting.finish());
  const landscape=buildSportsLandscape();root.add(landscape);
  const site=buildSiteBoundary();root.add(site);
+ const wellness=buildOutdoorWellness();root.add(wellness);
  // Compact timber play structures visible in the landscape references.
  for(const x of [-24,26]){box(root,x,2.59,15,4.5,.09,4,roof);for(const dx of [-.75,.75])for(const dz of [-.6,.6])box(root,x+dx,3.65,15+dz,.12,2.1,.12,wood);box(root,x,4.55,15,1.8,.12,1.6,wood);for(let i=0;i<5;i++)box(root,x,2.9+i*.3,16-i*.15,1,.08,.15,wood)}
 
  const photovoltaics=buildPhotovoltaics(roofSurfaces);root.add(photovoltaics);roofs.push(photovoltaics);
- root.userData={reference:'PDF geometry with facade details',estimatedTerrain:true,roofs,roofSurfaces,photovoltaics,garageDoor:door,deckOutline,deckRails,site,parkingStorage,homes:landscape.userData.homes};return root;
+ root.userData={reference:'PDF geometry with facade details',estimatedTerrain:true,roofs,roofSurfaces,photovoltaics,garageDoor:door,deckOutline,deckRails,site,parkingStorage,homes:landscape.userData.homes,wellness};return root;
 }

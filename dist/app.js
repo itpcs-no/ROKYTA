@@ -8,8 +8,9 @@ import {hillsideParking,parkingBays,parkingBlockAt,cellarAt,cellars,cellarDoors,
 import * as T from 'three';
 import {createWalker} from './avatar.js';
 import {createMountedRider} from './mounted-rider.js';
-import {garage,ramp,pool,rampHeight,levels,slabThickness,footprints,gardenStairs,exteriorHeight} from './project-geometry.js';
+import {garage,ramp,rampHeight,levels,slabThickness,footprints,gardenStairs,exteriorHeight} from './project-geometry.js';
 import {buildExterior} from './exterior.js';
+import {wellnessBarrierAt,wellnessCeiling,wellnessEntry,wellnessTarget} from './wellness-layout.js';
 import {OrbitControls} from './assets/OrbitControls.js';
 const $=id=>document.getElementById(id), view=$('view');
 try{await start()}catch(e){$('loading').style.display='block';$('loading').textContent='Model sa nepodarilo načítať. Skús obnoviť stránku v prehliadači s podporou WebGL.';console.error(e)}
@@ -53,28 +54,10 @@ for(let f=0;f<4;f++){
  }
  }
 
- for(const [x,z,x1,z1] of footprints[f]){
-  if(f===0&&x<pool.x0&&x1>pool.x1&&z<pool.z0&&z1>pool.z1){
-   const shape=new T.Shape();shape.moveTo(x,-z);shape.lineTo(x1,-z);shape.lineTo(x1,-z1);shape.lineTo(x,-z1);shape.closePath();const hole=new T.Path();hole.moveTo(pool.x0,-pool.z0);hole.lineTo(pool.x1,-pool.z0);hole.lineTo(pool.x1,-pool.z1);hole.lineTo(pool.x0,-pool.z1);hole.closePath();shape.holes.push(hole);const geo=new T.ExtrudeGeometry(shape,{depth:slabThickness,bevelEnabled:false});geo.rotateX(-Math.PI/2);const slab=new T.Mesh(geo,slabMat);slab.position.y=-slabThickness;slab.receiveShadow=true;group.add(slab);floorMeshes[f].push(slab);
-  }else floorMeshes[f].push(box(group,(x+x1)/2,-slabThickness/2,(z+z1)/2,x1-x,slabThickness,z1-z,slabMat));
- }
+ // The former indoor pool is closed with the same continuous ground-floor slab.
+ for(const [x,z,x1,z1] of footprints[f])floorMeshes[f].push(box(group,(x+x1)/2,-slabThickness/2,(z+z1)/2,x1-x,slabThickness,z1-z,slabMat));
  const geo=new T.PlaneGeometry(62,52);geo.rotateX(-Math.PI/2);const plan=new T.Mesh(geo,new T.MeshBasicMaterial({map:texture,transparent:true,opacity:.94,depthWrite:false}));plan.position.set(.175,.016,0);plan.visible=false;group.add(plan);group.userData.plan=plan;
 }
-// The pool's measured inner outline and -1.500 bottom come from 01_1NP.
-const poolGroup=new T.Group();poolGroup.name='Pool 1NP bottom -1.500';groups[0].add(poolGroup);
-const tileMat=surface('pool'),waterMat=new T.MeshPhysicalMaterial({color:0x53aeb4,transparent:true,opacity:.43,depthWrite:false,roughness:.075,metalness:.12,clearcoat:1,clearcoatRoughness:.09,envMapIntensity:1.4,side:T.DoubleSide});
-const waterTime={value:0};
-waterMat.onBeforeCompile=shader=>{shader.uniforms.waterTime=waterTime;shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vWaterSurface;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWaterSurface=position.xy;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform float waterTime;varying vec2 vWaterSurface;').replace('#include <normal_fragment_maps>','#include <normal_fragment_maps>\nnormal=normalize(normal+vec3(sin(vWaterSurface.x*9.0+vWaterSurface.y*4.0+waterTime*.9)*.065,cos(vWaterSurface.y*11.0+waterTime*.7)*.04,0.0));')};
-waterMat.customProgramCacheKey=()=> 'rokyta-water-1';
-const px=(pool.x0+pool.x1)/2,pz=(pool.z0+pool.z1)/2,pw=pool.x1-pool.x0,pd=pool.z1-pool.z0;
-box(poolGroup,px,pool.bottom-.06,pz,pw,.12,pd,tileMat);
-for(const x of [pool.x0-.06,pool.x1+.06])box(poolGroup,x,pool.bottom/2,pz,.12,-pool.bottom,pd+.24,tileMat);
-for(const z of [pool.z0-.06,pool.z1+.06])box(poolGroup,px,pool.bottom/2,z,pw,.0-pool.bottom,.12,tileMat);
-for(const x of [pool.x0-.16,pool.x1+.16])box(poolGroup,x,.035,pz,.25,.07,pd+.55,slabMat);
-for(const z of [pool.z0-.16,pool.z1+.16])box(poolGroup,px,.035,z,pw,.07,.25,slabMat);
-const water=new T.Mesh(new T.PlaneGeometry(pw,pd),waterMat);water.rotation.x=-Math.PI/2;water.position.set(px,pool.water,pz);poolGroup.add(water);
-for(let i=0;i<6;i++)box(poolGroup,pool.x1-1.6+(i+.5)*.24,pool.bottom+(i+1)*.23/2,pool.z1-.6,.24,(i+1)*.23,1.2,tileMat);
-for(const z of [pz-.35,pz+.35]){box(poolGroup,pool.x0+.25,-.3,z,.04,1.8,.04,handleMat);box(poolGroup,pool.x0-.25,.35,z,.04,.7,.04,handleMat);box(poolGroup,pool.x0,.69,z,.5,.04,.04,handleMat)}
 const walker=createWalker();scene.add(walker.root);walker.root.visible=false;const nav=new T.Vector3();let walkingTime=0,jumpOffset=0,jumpVelocity=0;
 const rider=createMountedRider();scene.add(rider.root);rider.root.visible=false;let mounted=false;
 const riderFootprint=[...Array.from({length:9},(_,i)=>[0,-1.5+i*.3]),...[-.45,.45].flatMap(side=>Array.from({length:5},(_,i)=>[side,-.6+i*.3]))];
@@ -88,7 +71,8 @@ function orbitHome(top=false){driving.leave();jumpOffset=jumpVelocity=0;mode='or
 function walkAt(x=2.3,z=-4.1,outside=false){if(selected==='all'&&!outside){selected=1;$('floor').value='1';visibility()}driving.leave();jumpOffset=jumpVelocity=0;mode='walk';mounted=false;camera.near=.12;camera.updateProjectionMatrix();controls.enabled=false;nav.set(x,(selected==='all'?0:data[selected].base)+1.65,z);camera.position.copy(nav);yaw=0;pitch=$('figure').checked?-.45:0;camera.rotation.order='YXZ';camera.rotation.set(0,0,0);$('hint').textContent='WASD / šípky: pohyb · ťahanie myšou: pohľad do strán aj hore/dole · koliesko: vzdialenosť · medzerník: skok · E: nastúpiť/vystúpiť · Shift: beh · Esc: obhliadka. Podlažie zmeníš hore; klik do mapy ťa premiestni.';visibility();status();$('panel').classList.remove('open')}
 $('figure').onchange=()=>{pitch=$('figure').checked?-.45:0;status()};$('startWalk').onclick=()=>mounted?dismountRider():mode==='walk'?orbitHome():selected==='all'?walkAt(5,-31,true):walkAt();
 $('floor').onchange=()=>{selected=$('floor').value==='all'?'all':Number($('floor').value);$('cutaway').checked=false;visibility();if(mode==='walk'){if(selected==='all')walkAt(5,-31,true);else walkAt(selected===3?1:2.3,selected===3?-5:-4.1)}else orbitHome()};$('orbit').onclick=()=>orbitHome();$('walk').onclick=()=>selected==='all'?walkAt(5,-31,true):walkAt();$('top').onclick=()=>orbitHome(true);$('reset').onclick=()=>orbitHome();$('plan').onchange=visibility;$('cutaway').onchange=visibility;$('panelToggle').onclick=()=>$('panel').classList.toggle('open');
-$('poolView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=true;visibility();orbitHome();camera.position.set(-31,19,-32);controls.target.set(px,-.6,pz);controls.update()};
+$('poolView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();const target=new T.Vector3(wellnessTarget.x,wellnessTarget.y,wellnessTarget.z),direction=new T.Vector3(-.85,1.2,-1).normalize(),distance=Math.max(39,15/Math.sin(Math.atan(Math.tan(camera.fov*Math.PI/360)*Math.min(camera.aspect,1))));if(innerWidth>760)target.addScaledVector(new T.Vector3().crossVectors(new T.Vector3(0,1,0),direction).normalize(),-5);controls.target.copy(target);camera.position.copy(target).addScaledVector(direction,distance);controls.maxDistance=Math.max(150,distance*1.2);controls.update();$('panel').classList.remove('open')};
+$('poolWalk').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(wellnessEntry.x,wellnessEntry.z,true);yaw=0;pitch=-.4};
 $('garageView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;visibility();orbitHome();camera.position.set(20,10,35);controls.target.set(-4,3,20);controls.update()};
 $('courtsView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();const direction=new T.Vector3(56,35.4,-38).normalize(),right=new T.Vector3().crossVectors(new T.Vector3(0,1,0),direction).normalize(),distance=Math.max(85,40/Math.sin(Math.atan(Math.tan(camera.fov*Math.PI/360)*Math.min(camera.aspect,1))));controls.target.set(-17,8.6,62);if(innerWidth>760)controls.target.addScaledVector(right,-7);camera.position.copy(controls.target).addScaledVector(direction,distance);controls.maxDistance=Math.max(150,distance*1.2);controls.update()};
 $('courtsWalk').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(courtSite.stairs.x,49,true);yaw=Math.PI;pitch=-.25};
@@ -120,7 +104,7 @@ function inside(x,z,p){let c=false;for(let i=0,j=p.length-1;i<p.length;j=i++){co
 function canMove(x,z){
  if($('free').checked)return true;
  if(selected==='all'&&(parkingBarrierAt(x,z,nav.y-1.65,ramp.bottom)||cellarBarrierAt(x,z,nav.y-1.65,$('doors').checked)))return false;
- if(selected==='all'&&courtBarrierAt(x,z))return false;
+ if(selected==='all'&&(courtBarrierAt(x,z)||wellnessBarrierAt(x,z)))return false;
  if(selected==='all'&&homeBarrierAt(x,z,$('doors').checked))return false;
  if(selected==='all'&&siteBarrierAt(x,z,$('gate').checked))return false;
  const floor=selected==='all'?(nav.y-1.65>2.5?1:0):selected;
@@ -131,12 +115,12 @@ function canMove(x,z){
   if(floor<2)supported ||= x>-28.68&&x<28.68&&z>-24.63&&z<-22.9;
   if(!supported)return false;
  }
- if(floor===0&&x>pool.x0-.12&&x<pool.x1+.12&&z>pool.z0-.12&&z<pool.z1+.12)return false;
  for(const d of data[floor].doors||[]){const end=$('doors').checked?d.open:d.closed;const a=d.hinge,dx=end[0]-a[0],dz=end[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz)));if(Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz)<.17)return false}
  return !data[floor].walls.some(p=>[[0,0],[.18,0],[-.18,0],[0,.18],[0,-.18]].some(o=>inside(x+o[0],z+o[1],p)));
 }
 const cameraRay=new T.Raycaster(),cameraTarget=new T.Vector3(),cameraDirection=new T.Vector3();
 function coveredCeiling(x=nav.x,z=nav.z,foot=nav.y-1.65){
+ const wellness=wellnessCeiling(x,z);if(wellness!==null)return wellness;
  if(parkingBlockAt(x,z)&&foot<ramp.bottom+hillsideParking.clearance+.1)return ramp.bottom+hillsideParking.clearance;
  if(cellarAt(x,z)&&foot<cellars.ceiling+.05)return cellars.ceiling;
  if(homeAt(x,z))return homesLevel+2.98;
@@ -175,16 +159,17 @@ function keepCoveredCamera(eyeY){
  const nearParking=foot<ramp.bottom+hillsideParking.clearance+.1&&nav.z>hillsideParking.front-8&&nav.z<hillsideParking.back+1&&hillsideParking.blocks.some(b=>nav.x>b.x0-4&&nav.x<b.x1+4);
  const nearCellars=foot<cellars.ceiling+.05&&nav.x>cellars.x0-3&&nav.x<cellars.x1+3&&nav.z>cellars.front-6&&nav.z<cellars.back+1;
  const nearHome=homeAt(nav.x,nav.z,4);
- if(!nearParking&&!nearCellars&&!nearHome)return;
+ const nearWellness=wellnessCeiling(nav.x,nav.z)!==null;
+ if(!nearParking&&!nearCellars&&!nearHome&&!nearWellness)return;
  if(ceiling!==null)camera.position.y=Math.min(camera.position.y,ceiling-.18);
  cameraTarget.set(nav.x,eyeY-.35,nav.z);cameraDirection.subVectors(camera.position,cameraTarget);const distance=cameraDirection.length();cameraDirection.normalize();
  cameraRay.set(cameraTarget,cameraDirection);cameraRay.far=distance;
- const hit=cameraRay.intersectObjects(nearHome?exterior.userData.homes.userData.occluders:exterior.userData.parkingStorage.userData.occluders,false)[0];
+ const hit=cameraRay.intersectObjects(nearWellness?exterior.userData.wellness.userData.occluders:nearHome?exterior.userData.homes.userData.occluders:exterior.userData.parkingStorage.userData.occluders,false)[0];
  if(hit)camera.position.copy(cameraTarget).addScaledVector(cameraDirection,Math.max(.4,hit.distance-.16));
  camera.lookAt(cameraTarget);
 }
 finishSurfaces(scene,renderer);
-function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}window.addEventListener('resize',resize);setDoors();visibility();orbitHome();$('loading').style.display='none';renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),.05);waterTime.value+=dt;if(mode==='walk'){const previousX=nav.x,previousZ=nav.z;if(selected==='all')nav.y=exteriorHeight(nav.x,nav.z,nav.y-1.65)+1.65;const f=(keys.w?1:0)-(keys.s?1:0),r=(keys.d?1:0)-(keys.a?1:0),norm=Math.hypot(f,r)||1,speed=(keys.shift?6:2.7)*dt/norm,dx=(-Math.sin(yaw)*f+Math.cos(yaw)*r)*speed,dz=(-Math.cos(yaw)*f-Math.sin(yaw)*r)*speed;const x=Math.max(-110,Math.min(110,nav.x+dx)),z=Math.max(-110,Math.min(110,nav.z+dz));if(driving.active){const heading=driving.active.rotation.y;driving.update(dt,f,-r,!!keys[' ']);yaw+=driving.active.rotation.y-heading;nav.set(driving.active.position.x,driving.active.position.y+1.65,driving.active.position.z);$('status').textContent=`Auto · ${Math.round(Math.abs(driving.speed)*3.6)} km/h · E: vystúpiť · medzerník: brzda`}else{if(mounted){if(f||r){const desired=yaw+Math.atan2(-r,f),difference=Math.atan2(Math.sin(desired-rider.root.rotation.y),Math.cos(desired-rider.root.rotation.y)),heading=rider.root.rotation.y+T.MathUtils.clamp(difference,-dt*4,dt*4),step=(keys.shift?4.2:2.1)*dt,rx=Math.max(-110,Math.min(110,nav.x-Math.sin(heading)*step)),rz=Math.max(-110,Math.min(110,nav.z-Math.cos(heading)*step));if(canRideMove(rx,rz,heading)){nav.x=rx;nav.z=rz;rider.root.rotation.y=heading}else if(canRideMove(nav.x,nav.z,heading))rider.root.rotation.y=heading}}else{if(canMove(x,nav.z))nav.x=x;if(canMove(nav.x,z))nav.z=z}if(selected==='all')nav.y=exteriorHeight(nav.x,nav.z,nav.y-1.65)+1.65;if(jumpVelocity!==0||jumpOffset>0){jumpVelocity-=12*dt;jumpOffset=Math.max(0,jumpOffset+jumpVelocity*dt);const ceiling=coveredCeiling();if(ceiling!==null&&jumpOffset>ceiling-(nav.y-1.65)-(mounted?rider.height:1.75)){jumpOffset=Math.max(0,ceiling-(nav.y-1.65)-(mounted?rider.height:1.75));jumpVelocity=Math.min(0,jumpVelocity)}if(jumpOffset===0)jumpVelocity=0}}const mx=(nav.x+30.825)/62,mz=(nav.z+26)/52;$('dot').style.display=mx>=0&&mx<=1&&mz>=0&&mz<=1?'block':'none';$('dot').style.left=mx*100+'%';$('dot').style.top=mz*100+'%'
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}window.addEventListener('resize',resize);setDoors();visibility();orbitHome();$('loading').style.display='none';renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),.05);exterior.userData.wellness.userData.update(dt);if(mode==='walk'){const previousX=nav.x,previousZ=nav.z;if(selected==='all')nav.y=exteriorHeight(nav.x,nav.z,nav.y-1.65)+1.65;const f=(keys.w?1:0)-(keys.s?1:0),r=(keys.d?1:0)-(keys.a?1:0),norm=Math.hypot(f,r)||1,speed=(keys.shift?6:2.7)*dt/norm,dx=(-Math.sin(yaw)*f+Math.cos(yaw)*r)*speed,dz=(-Math.cos(yaw)*f-Math.sin(yaw)*r)*speed;const x=Math.max(-110,Math.min(110,nav.x+dx)),z=Math.max(-110,Math.min(110,nav.z+dz));if(driving.active){const heading=driving.active.rotation.y;driving.update(dt,f,-r,!!keys[' ']);yaw+=driving.active.rotation.y-heading;nav.set(driving.active.position.x,driving.active.position.y+1.65,driving.active.position.z);$('status').textContent=`Auto · ${Math.round(Math.abs(driving.speed)*3.6)} km/h · E: vystúpiť · medzerník: brzda`}else{if(mounted){if(f||r){const desired=yaw+Math.atan2(-r,f),difference=Math.atan2(Math.sin(desired-rider.root.rotation.y),Math.cos(desired-rider.root.rotation.y)),heading=rider.root.rotation.y+T.MathUtils.clamp(difference,-dt*4,dt*4),step=(keys.shift?4.2:2.1)*dt,rx=Math.max(-110,Math.min(110,nav.x-Math.sin(heading)*step)),rz=Math.max(-110,Math.min(110,nav.z-Math.cos(heading)*step));if(canRideMove(rx,rz,heading)){nav.x=rx;nav.z=rz;rider.root.rotation.y=heading}else if(canRideMove(nav.x,nav.z,heading))rider.root.rotation.y=heading}}else{if(canMove(x,nav.z))nav.x=x;if(canMove(nav.x,z))nav.z=z}if(selected==='all')nav.y=exteriorHeight(nav.x,nav.z,nav.y-1.65)+1.65;if(jumpVelocity!==0||jumpOffset>0){jumpVelocity-=12*dt;jumpOffset=Math.max(0,jumpOffset+jumpVelocity*dt);const ceiling=coveredCeiling();if(ceiling!==null&&jumpOffset>ceiling-(nav.y-1.65)-(mounted?rider.height:1.75)){jumpOffset=Math.max(0,ceiling-(nav.y-1.65)-(mounted?rider.height:1.75));jumpVelocity=Math.min(0,jumpVelocity)}if(jumpOffset===0)jumpVelocity=0}}const mx=(nav.x+30.825)/62,mz=(nav.z+26)/52;$('dot').style.display=mx>=0&&mx<=1&&mz>=0&&mz<=1?'block':'none';$('dot').style.left=mx*100+'%';$('dot').style.top=mz*100+'%'
  walkingTime+=dt;const eyeY=nav.y+jumpOffset+(mounted?rider.eyeHeight-1.65:0);walker.root.position.set(nav.x,nav.y+jumpOffset-1.65,nav.z);if(f||r)walker.root.rotation.y=yaw+Math.atan2(-r,f);walker.animate(walkingTime,!!(f||r));if(mounted){rider.root.position.set(nav.x,nav.y-1.65+jumpOffset,nav.z);rider.animate(walkingTime,Math.hypot(nav.x-previousX,nav.z-previousZ)/Math.max(dt,.000001),dt,jumpOffset>0,(x,z)=>exteriorHeight(x,z,nav.y-1.65))}
  if($('figure').checked||driving.active){const targetY=eyeY-(mounted?.65:.35),horizontal=walkDistance*Math.cos(pitch);camera.position.set(nav.x+Math.sin(yaw)*horizontal,Math.max(nav.y-1.4,targetY-walkDistance*Math.sin(pitch)),nav.z+Math.cos(yaw)*horizontal);camera.lookAt(nav.x,targetY,nav.z);keepCoveredCamera(eyeY)}else{camera.position.set(nav.x,eyeY,nav.z);camera.rotation.set(pitch,yaw,0,'YXZ')}
  const insideHome=selected==='all'&&homeAt(nav.x,nav.z),indoors=!!insideHome||selected!=='all'||footprints[0].some(([a,b,c,d])=>nav.x>a&&nav.x<c&&nav.z>b&&nav.z<d);
