@@ -2,7 +2,7 @@ import {createDriving} from './driving.js';
 import {surface,glassMaterial,finishSurfaces} from './surface-materials.js';
 import {addDaylight} from './daylight.js';
 import {courtSite,courtBarrierAt} from './court-layout.js';
-import {siteBarrierAt} from './site-layout.js';
+import {siteBarrierAt,serviceHouse,serviceShed} from './site-layout.js';
 import {hillsideParking,parkingBays,parkingBlockAt,cellarAt,cellars,cellarDoors,parkingBarrierAt,cellarBarrierAt} from './parking-layout.js';
 import * as T from 'three';
 import {createWalker} from './avatar.js';
@@ -89,7 +89,7 @@ $('garageView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').
 $('courtsView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();camera.position.set(86,57,-60);controls.target.set(-14,3.8,29);controls.update()};
 $('courtsWalk').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(courtSite.stairs.x,32,true);yaw=Math.PI;pitch=-.25};
 $('entranceView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();camera.position.set(85,28,7);controls.target.set(36,2,26);controls.update()};
-$('serviceView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();camera.position.set(-78,34,-55);controls.target.set(-33,1,-12);controls.update()};
+$('serviceView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();const x=(serviceHouse.x1+serviceShed.x0)/2,z=(serviceHouse.z1+serviceShed.z0)/2;camera.position.set(x-29,30,z+30);controls.target.set(x+7,1,z);controls.update()};
 $('entranceWalk').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(49,30.5,true);yaw=Math.PI/2;pitch=-.3};
 $('map').onclick=e=>{const r=$('map').getBoundingClientRect();walkAt((e.clientX-r.left)/r.width*62-30.825,(e.clientY-r.top)/r.height*52-26);$('panel').classList.remove('open')};
 const canvas=renderer.domElement;canvas.addEventListener('pointerdown',e=>{if(mode==='walk'){drag={x:e.clientX,y:e.clientY,id:e.pointerId};canvas.setPointerCapture(e.pointerId)}});canvas.addEventListener('pointermove',e=>{if(drag&&mode==='walk'){yaw-=(e.clientX-drag.x)*.004;pitch=Math.max(-1.35,Math.min(1.35,pitch-(e.clientY-drag.y)*.004));drag.x=e.clientX;drag.y=e.clientY}});canvas.addEventListener('pointerup',()=>drag=null);canvas.addEventListener('pointercancel',()=>drag=null);canvas.addEventListener('lostpointercapture',()=>drag=null);canvas.addEventListener('contextmenu',e=>{if(mode==='walk')e.preventDefault()});canvas.addEventListener('wheel',e=>{if(mode==='walk'&&$('figure').checked){e.preventDefault();walkDistance=Math.max(2,Math.min(10,walkDistance*Math.exp(e.deltaY*.001))) }},{passive:false});
