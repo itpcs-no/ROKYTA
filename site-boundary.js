@@ -28,11 +28,11 @@ export function buildSiteBoundary(){
   const fill=concrete.clone();fill.side=T.DoubleSide;side.push(0,1,2,1,3,2);const n=(ps.length-1)*4;side.push(n,n+2,n+1,n+1,n+2,n+3);mesh(p,side,fill,'Plné podložie cesty');
  }
  solidPolygon(servicePaving,.06,paving,'Spevnený dvor pri vedľajších objektoch');
- solidPolygon([[-42,-9.95],[-37,-9.95],[-37,-5.65],[-42,-5.65]],.057,paving,'Napojenie krytého parkovania');
+ solidPolygon([[-48.6,-9.95],[-37,-9.95],[-37,-5.65],[-48.6,-5.65]],.06,paving,'Napojenie kobiek na obvodovú cestu');
  solidPolygon([[-37,-49],[-35,-49],[-35,-43.5],[-37,-43.5]],.06,paving,'Peší výstup z areálu');
  // Graded grass shoulders: no suspended asphalt sheets or exposed open undersides.
  const tp=[],ti=[];
- for(let x=-58;x<59;x+=.6)for(let z=-66;z<71;z+=.6){
+ for(let x=-66;x<59;x+=.6)for(let z=-66;z<71;z+=.6){
   const v=[[x,z],[x+.6,z],[x+.6,z+.6],[x,z+.6]],ys=v.map(([x,z])=>siteShoulderHeight(x,z,ramp.bottom));
   if(ys.some(y=>y===null))continue;const n=tp.length/3;v.forEach(([x,z],i)=>tp.push(x,ys[i],z));ti.push(n,n+2,n+1,n,n+3,n+2);
  }
@@ -68,13 +68,14 @@ export function buildSiteBoundary(){
  box(entrance.x+.37,ramp.bottom+1.25,27.2,.045,.33,.2,dark);
  // Detached white service building and its gently curved sheet-metal roof.
  const h=serviceHouse,cx=(h.x0+h.x1)/2,cz=(h.z0+h.z1)/2;
- const building=box(cx,h.base+h.eaves/2,cz,h.x1-h.x0,h.eaves,h.z1-h.z0);building.name='Vedľajší objekt podľa fotografie 2007';
+ const building=box(cx,h.base+h.eaves/2,cz,h.x1-h.x0,h.eaves,h.z1-h.z0);building.name='Vedľajší objekt osadený podľa situačnej mapy';
  box(cx,.13,cz,h.x1-h.x0+.12,.26,h.z1-h.z0+.12,concrete);
- for(const z of [-27.1,-22.1,-18.3]){
-  const width=z===-22.1?1.15:1.35,bottom=z===-22.1?0:.95,height=z===-22.1?2.22:1.05;
+ for(const [i,fraction] of [.2,.55,.83].entries()){
+  const z=h.z0+(h.z1-h.z0)*fraction,isDoor=i===1;
+  const width=isDoor?1.15:1.35,bottom=isDoor?0:.95,height=isDoor?2.22:1.05;
   box(h.x1+.025,h.base+bottom+height/2,z,.07,height+.13,width+.14,dark);
-  box(h.x1+.065,h.base+bottom+height/2,z,.025,height,width,z===-22.1?metal:glass);
-  if(z!==-22.1)box(h.x1+.12,h.base+bottom-.04,z,.26,.08,width+.22,concrete);
+  box(h.x1+.065,h.base+bottom+height/2,z,.025,height,width,isDoor?metal:glass);
+  if(!isDoor)box(h.x1+.12,h.base+bottom-.04,z,.26,.08,width+.22,concrete);
  }
  function barrel(x0,x1,z0,z1,y,rise){
   const points=[],idx=[],n=28;
@@ -87,12 +88,12 @@ export function buildSiteBoundary(){
  barrel(h.x0-.25,h.x1+.25,h.z0-.3,h.z1+.3,h.base+h.eaves,h.rise);
  for(const z of [h.z0+.1,h.z1-.1])bar(new T.Vector3(h.x0-.08,h.base,z),new T.Vector3(h.x0-.08,h.base+h.eaves,z),.09,metal);
  const s=serviceShed,sx=(s.x0+s.x1)/2,sz=(s.z0+s.z1)/2;
- box(sx,1.42, s.z0,s.x1-s.x0,2.84,.22);for(const x of [s.x0,s.x1])box(x,1.42,sz,.22,2.84,s.z1-s.z0);
- for(let i=0;i<=3;i++)box(s.x0+(s.x1-s.x0)*i/3,1.4,s.z1,.18,2.8,.18);
- box(sx,2.76,sz,s.x1-s.x0+.45,.18,s.z1-s.z0+.5,silver).name='Otvorený prístrešok pri vedľajšom objekte';
- for(const [x,z] of [[-55,-9],[-55,6],[-55,19],[40,-35],[39,-18],[-25,-40],[23,-38]])plants.tree(x,z,terrain(x,z),.72,true);
+ box(s.x0,s.base+1.42,sz,.22,2.84,s.z1-s.z0);for(const z of [s.z0,s.z1])box(sx,s.base+1.42,z,s.x1-s.x0,2.84,.22);
+ for(let i=0;i<=3;i++)box(s.x1,s.base+1.4,s.z0+(s.z1-s.z0)*i/3,.18,2.8,.18);
+ box(sx,s.base+2.76,sz,s.x1-s.x0+.45,.18,s.z1-s.z0+.5,silver).name='Otvorený prístrešok pri vedľajšom objekte';
+ for(const [x,z] of [[-62,-15],[-61,11],[-61,22],[40,-35],[39,-18],[-25,-40],[23,-38]])plants.tree(x,z,terrain(x,z),.72,true);
  root.add(plants.finish());
  for(const [mat,matrices] of bars){const o=new T.InstancedMesh(new T.BoxGeometry(1,1,1),mat,matrices.length);matrices.forEach((m,i)=>o.setMatrixAt(i,m));o.name='Kovové profily oplotenia a odkvapov';o.castShadow=true;o.receiveShadow=true;root.add(o)}
  const setGate=open=>{gate.position.z=entrance.z-(open?entrance.slide:0)};setGate(true);
- root.userData={setGate,gate,estimatedFromPhotos:true};return root;
+ root.userData={setGate,gate,estimatedFromPhotos:true,ancillaryPlacementReference:'assets/site-map.png'};return root;
 }
