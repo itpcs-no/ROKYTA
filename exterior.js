@@ -94,11 +94,11 @@ export function buildExterior(){
  for(let i=0;i<40;i++){const a=i*2.399,r=90+(i%7)*11,x=Math.cos(a)*r,z=Math.sin(a)*r;planting.tree(x,z,courtTerrainHeight(x,z,ramp.bottom)??-.06,1+(i%4)*.18,true)}
  for(const [x,z] of [[-64,59],[-64,76],[-49,80],[-27,82],[-7,82],[16,79],[33,72],[36,53]])planting.tree(x,z,courtTerrainHeight(x,z,ramp.bottom)??-.06,.9,true);
  root.add(planting.finish());
- root.add(buildSportsLandscape());
+ const landscape=buildSportsLandscape();root.add(landscape);
  const site=buildSiteBoundary();root.add(site);
  // Compact timber play structures visible in the landscape references.
  for(const x of [-24,26]){box(root,x,2.59,15,4.5,.09,4,roof);for(const dx of [-.75,.75])for(const dz of [-.6,.6])box(root,x+dx,3.65,15+dz,.12,2.1,.12,wood);box(root,x,4.55,15,1.8,.12,1.6,wood);for(let i=0;i<5;i++)box(root,x,2.9+i*.3,16-i*.15,1,.08,.15,wood)}
 
  const photovoltaics=buildPhotovoltaics(roofSurfaces);root.add(photovoltaics);roofs.push(photovoltaics);
- root.userData={reference:'PDF geometry with facade details',estimatedTerrain:true,roofs,roofSurfaces,photovoltaics,garageDoor:door,deckOutline,deckRails,site,parkingStorage};return root;
+ root.userData={reference:'PDF geometry with facade details',estimatedTerrain:true,roofs,roofSurfaces,photovoltaics,garageDoor:door,deckOutline,deckRails,site,parkingStorage,homes:landscape.userData.homes};return root;
 }

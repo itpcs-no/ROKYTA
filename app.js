@@ -2,6 +2,7 @@ import {createDriving} from './driving.js';
 import {surface,glassMaterial,finishSurfaces} from './surface-materials.js';
 import {addDaylight} from './daylight.js';
 import {courtSite,courtBarrierAt} from './court-layout.js';
+import {homeAt,homeBarrierAt,homesLevel} from './homes-layout.js';
 import {siteBarrierAt,serviceHouse,serviceShed} from './site-layout.js';
 import {hillsideParking,parkingBays,parkingBlockAt,cellarAt,cellars,cellarDoors,parkingBarrierAt,cellarBarrierAt} from './parking-layout.js';
 import * as T from 'three';
@@ -75,7 +76,7 @@ for(let i=0;i<6;i++)box(poolGroup,pool.x1-1.6+(i+.5)*.24,pool.bottom+(i+1)*.23/2
 for(const z of [pz-.35,pz+.35]){box(poolGroup,pool.x0+.25,-.3,z,.04,1.8,.04,handleMat);box(poolGroup,pool.x0-.25,.35,z,.04,.7,.04,handleMat);box(poolGroup,pool.x0,.69,z,.5,.04,.04,handleMat)}
 const walker=createWalker();scene.add(walker.root);walker.root.visible=false;const nav=new T.Vector3();let walkingTime=0,jumpOffset=0,jumpVelocity=0;
 let selected='all', mode='orbit', yaw=0,pitch=-.45,walkDistance=5.5,keys={},drag=null;const clock=new T.Clock();
-function setDoors(){renderer.shadowMap.needsUpdate=true;const shutter=exterior.userData.garageDoor;shutter.scale.y=$('doors').checked?.045:1;shutter.position.y=(garage.floor+garage.doorHeight)*(1-shutter.scale.y);doorPivots.forEach(p=>p.rotation.y=$('doors').checked?p.userData.opened:p.userData.closed);exterior.userData.parkingStorage.userData.setDoors($('doors').checked)}
+function setDoors(){renderer.shadowMap.needsUpdate=true;const shutter=exterior.userData.garageDoor;shutter.scale.y=$('doors').checked?.045:1;shutter.position.y=(garage.floor+garage.doorHeight)*(1-shutter.scale.y);doorPivots.forEach(p=>p.rotation.y=$('doors').checked?p.userData.opened:p.userData.closed);exterior.userData.parkingStorage.userData.setDoors($('doors').checked);exterior.userData.homes.userData.setDoors($('doors').checked)}
 $('doors').onchange=setDoors;
 $('gate').onchange=()=>{exterior.userData.site.userData.setGate($('gate').checked);renderer.shadowMap.needsUpdate=true};
 function status(){walker.root.visible=mode==='walk'&&!driving.active&&$('figure').checked;$('startWalk').textContent=mode==='walk'?'Ukončiť prechádzku':'Prejsť sa s panáčikom'; $('status').textContent=`${selected==='all'?'Celá budova':`${selected+1}. NP`} · ${mode==='walk'?'WASD · pohyb':'obhliadka'}`;$('orbit').classList.toggle('active',mode==='orbit');$('walk').classList.toggle('active',mode==='walk');document.body.classList.toggle('walking',mode==='walk') }
@@ -86,8 +87,8 @@ $('figure').onchange=()=>{pitch=$('figure').checked?-.45:0;status()};$('startWal
 $('floor').onchange=()=>{selected=$('floor').value==='all'?'all':Number($('floor').value);$('cutaway').checked=false;visibility();if(mode==='walk'){if(selected==='all')walkAt(5,-31,true);else walkAt(selected===3?1:2.3,selected===3?-5:-4.1)}else orbitHome()};$('orbit').onclick=()=>orbitHome();$('walk').onclick=()=>selected==='all'?walkAt(5,-31,true):walkAt();$('top').onclick=()=>orbitHome(true);$('reset').onclick=()=>orbitHome();$('plan').onchange=visibility;$('cutaway').onchange=visibility;$('panelToggle').onclick=()=>$('panel').classList.toggle('open');
 $('poolView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=true;visibility();orbitHome();camera.position.set(-31,19,-32);controls.target.set(px,-.6,pz);controls.update()};
 $('garageView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;visibility();orbitHome();camera.position.set(20,10,35);controls.target.set(-4,3,20);controls.update()};
-$('courtsView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();camera.position.set(86,57,-60);controls.target.set(-14,3.8,29);controls.update()};
-$('courtsWalk').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(courtSite.stairs.x,32,true);yaw=Math.PI;pitch=-.25};
+$('courtsView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();const direction=new T.Vector3(56,35.4,-38).normalize(),right=new T.Vector3().crossVectors(new T.Vector3(0,1,0),direction).normalize(),distance=Math.max(85,40/Math.sin(Math.atan(Math.tan(camera.fov*Math.PI/360)*Math.min(camera.aspect,1))));controls.target.set(-17,8.6,62);if(innerWidth>760)controls.target.addScaledVector(right,-7);camera.position.copy(controls.target).addScaledVector(direction,distance);controls.maxDistance=Math.max(150,distance*1.2);controls.update()};
+$('courtsWalk').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(courtSite.stairs.x,49,true);yaw=Math.PI;pitch=-.25};
 $('entranceView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();camera.position.set(85,28,7);controls.target.set(36,2,26);controls.update()};
 $('serviceView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();const x=(serviceHouse.x1+serviceShed.x0)/2,z=(serviceHouse.z1+serviceShed.z0)/2;camera.position.set(x-29,30,z+30);controls.target.set(x+7,1,z);controls.update()};
 $('entranceWalk').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(49,30.5,true);yaw=Math.PI/2;pitch=-.3};
@@ -116,6 +117,7 @@ function canMove(x,z){
  if($('free').checked)return true;
  if(selected==='all'&&(parkingBarrierAt(x,z,nav.y-1.65,ramp.bottom)||cellarBarrierAt(x,z,nav.y-1.65,$('doors').checked)))return false;
  if(selected==='all'&&courtBarrierAt(x,z))return false;
+ if(selected==='all'&&homeBarrierAt(x,z,$('doors').checked))return false;
  if(selected==='all'&&siteBarrierAt(x,z,$('gate').checked))return false;
  const floor=selected==='all'?(nav.y-1.65>2.5?1:0):selected;
  if(selected==='all'&&!$('doors').checked&&Math.abs(x-garage.x1)<.2&&z>garage.doorZ0&&z<garage.doorZ1)return false;
@@ -134,6 +136,7 @@ function coveredCeiling(){
  const foot=nav.y-1.65;
  if(parkingBlockAt(nav.x,nav.z)&&foot<ramp.bottom+hillsideParking.clearance+.1)return ramp.bottom+hillsideParking.clearance;
  if(cellarAt(nav.x,nav.z)&&foot<cellars.ceiling+.05)return cellars.ceiling;
+ if(homeAt(nav.x,nav.z))return homesLevel+2.98;
  return null;
 }
 function keepCoveredCamera(eyeY){
@@ -141,11 +144,12 @@ function keepCoveredCamera(eyeY){
  const ceiling=coveredCeiling(),foot=nav.y-1.65;
  const nearParking=foot<ramp.bottom+hillsideParking.clearance+.1&&nav.z>hillsideParking.front-8&&nav.z<hillsideParking.back+1&&hillsideParking.blocks.some(b=>nav.x>b.x0-4&&nav.x<b.x1+4);
  const nearCellars=foot<cellars.ceiling+.05&&nav.x>cellars.x0-3&&nav.x<cellars.x1+3&&nav.z>cellars.front-6&&nav.z<cellars.back+1;
- if(!nearParking&&!nearCellars)return;
+ const nearHome=homeAt(nav.x,nav.z,4);
+ if(!nearParking&&!nearCellars&&!nearHome)return;
  if(ceiling!==null)camera.position.y=Math.min(camera.position.y,ceiling-.18);
  cameraTarget.set(nav.x,eyeY-.35,nav.z);cameraDirection.subVectors(camera.position,cameraTarget);const distance=cameraDirection.length();cameraDirection.normalize();
  cameraRay.set(cameraTarget,cameraDirection);cameraRay.far=distance;
- const hit=cameraRay.intersectObjects(exterior.userData.parkingStorage.userData.occluders,false)[0];
+ const hit=cameraRay.intersectObjects(nearHome?exterior.userData.homes.userData.occluders:exterior.userData.parkingStorage.userData.occluders,false)[0];
  if(hit)camera.position.copy(cameraTarget).addScaledVector(cameraDirection,Math.max(.4,hit.distance-.16));
  camera.lookAt(cameraTarget);
 }
@@ -153,7 +157,7 @@ finishSurfaces(scene,renderer);
 function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}window.addEventListener('resize',resize);setDoors();visibility();orbitHome();$('loading').style.display='none';renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),.05);waterTime.value+=dt;if(mode==='walk'){if(selected==='all')nav.y=exteriorHeight(nav.x,nav.z,nav.y-1.65)+1.65;const f=(keys.w?1:0)-(keys.s?1:0),r=(keys.d?1:0)-(keys.a?1:0),norm=Math.hypot(f,r)||1,speed=(keys.shift?6:2.7)*dt/norm,dx=(-Math.sin(yaw)*f+Math.cos(yaw)*r)*speed,dz=(-Math.cos(yaw)*f-Math.sin(yaw)*r)*speed;const x=Math.max(-110,Math.min(110,nav.x+dx)),z=Math.max(-110,Math.min(110,nav.z+dz));if(driving.active){const heading=driving.active.rotation.y;driving.update(dt,f,-r,!!keys[' ']);yaw+=driving.active.rotation.y-heading;nav.set(driving.active.position.x,driving.active.position.y+1.65,driving.active.position.z);$('status').textContent=`Auto · ${Math.round(Math.abs(driving.speed)*3.6)} km/h · E: vystúpiť · medzerník: brzda`}else{if(canMove(x,nav.z))nav.x=x;if(canMove(nav.x,z))nav.z=z;if(selected==='all')nav.y=exteriorHeight(nav.x,nav.z,nav.y-1.65)+1.65;if(jumpVelocity!==0||jumpOffset>0){jumpVelocity-=12*dt;jumpOffset=Math.max(0,jumpOffset+jumpVelocity*dt);const ceiling=coveredCeiling();if(ceiling!==null&&jumpOffset>ceiling-(nav.y-1.65)-1.75){jumpOffset=Math.max(0,ceiling-(nav.y-1.65)-1.75);jumpVelocity=Math.min(0,jumpVelocity)}if(jumpOffset===0)jumpVelocity=0}}const mx=(nav.x+30.825)/62,mz=(nav.z+26)/52;$('dot').style.display=mx>=0&&mx<=1&&mz>=0&&mz<=1?'block':'none';$('dot').style.left=mx*100+'%';$('dot').style.top=mz*100+'%'
  walkingTime+=dt;const eyeY=nav.y+jumpOffset;walker.root.position.set(nav.x,eyeY-1.65,nav.z);if(f||r)walker.root.rotation.y=yaw+Math.atan2(-r,f);walker.animate(walkingTime,!!(f||r));
  if($('figure').checked||driving.active){const targetY=eyeY-.35,horizontal=walkDistance*Math.cos(pitch);camera.position.set(nav.x+Math.sin(yaw)*horizontal,Math.max(nav.y-1.4,targetY-walkDistance*Math.sin(pitch)),nav.z+Math.cos(yaw)*horizontal);camera.lookAt(nav.x,targetY,nav.z);keepCoveredCamera(eyeY)}else{camera.position.set(nav.x,eyeY,nav.z);camera.rotation.set(pitch,yaw,0,'YXZ')}
- const indoors=selected!=='all'||footprints[0].some(([a,b,c,d])=>nav.x>a&&nav.x<c&&nav.z>b&&nav.z<d);
- renderer.clippingPlanes=$('cutaway').checked?[new T.Plane(new T.Vector3(0,-1,0),2.55)]:indoors&&$('figure').checked?[new T.Plane(new T.Vector3(0,-1,0),(selected==='all'?0:levels[selected])+2.3)]:[];
+ const insideHome=selected==='all'&&homeAt(nav.x,nav.z),indoors=!!insideHome||selected!=='all'||footprints[0].some(([a,b,c,d])=>nav.x>a&&nav.x<c&&nav.z>b&&nav.z<d);
+ renderer.clippingPlanes=$('cutaway').checked?[new T.Plane(new T.Vector3(0,-1,0),2.55)]:indoors&&$('figure').checked?[new T.Plane(new T.Vector3(0,-1,0),(insideHome?homesLevel:selected==='all'?0:levels[selected])+2.3)]:[];
  renderer.shadowMap.needsUpdate=true;}else controls.update();renderer.render(scene,camera)});
 }

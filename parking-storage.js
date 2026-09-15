@@ -5,7 +5,7 @@ import {hillsideParking as parking,parkingBays,parkingRoofLevel,cellars,cellarDo
 
 export function buildParkingAndStorage(){
  const root=new T.Group();root.name='Zapustené parkovanie a pivničné kobky';
- const parkingGroup=new T.Group(),storage=new T.Group();parkingGroup.name='Parkovanie pod kurtmi';storage.name='Pivničné kobky v pôvodnom parkovaní';root.add(parkingGroup,storage);
+ const parkingGroup=new T.Group(),storage=new T.Group();parkingGroup.name='Parkovanie pod rodinnými domami';storage.name='Pivničné kobky v pôvodnom parkovaní';root.add(parkingGroup,storage);
  const concrete=surface('concrete'),white=surface('plaster'),paving=surface('paving'),wood=surface('wood');
  const metal=new T.MeshStandardMaterial({color:0x414d50,metalness:.58,roughness:.4});
  const line=new T.MeshStandardMaterial({color:0xe0e0d4,roughness:.85});
