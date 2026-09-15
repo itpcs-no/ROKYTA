@@ -5,12 +5,13 @@ import {createPlanting} from './planting.js';
 import {buildSportsLandscape} from './sports-landscape.js';
 import {buildSiteBoundary} from './site-boundary.js';
 import {buildParkingAndStorage} from './parking-storage.js';
+import {buildPhotovoltaics} from './photovoltaics.js';
 import {courtTerrainHeight} from './court-layout.js';
 import {garage,ramp,pool,levels,footprints,gardenStairs,access} from './project-geometry.js';
 // Visual reconstruction of the 1 August 2018 references, fitted to the PDF footprint.
 // Facade opening rhythm and terrain are estimates, not measured survey geometry.
 export function buildExterior(){
- const root=new T.Group();root.name='Exterior details and project terrain';const roofs=[];
+ const root=new T.Group();root.name='Exterior details and project terrain';const roofs=[],roofSurfaces=[];
  const material=(color,roughness=.85)=>new T.MeshStandardMaterial({color,roughness});
  const white=surface('plaster'),stone=surface('stone'),roof=surface('roof'),paving=surface('paving'),frame=material(0x31383b,.3),lawn=surface('grass'),earth=surface('concrete'),wood=surface('wood'),railglass=glassMaterial(true);frame.metalness=.7;
  const box=(g,x,y,z,w,h,d,m=white)=>{if(w<=0||h<=0||d<=0)throw Error('Nonpositive exterior dimensions');const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=!m.transparent;o.receiveShadow=true;g.add(o);return o};
@@ -18,7 +19,7 @@ export function buildExterior(){
  function facade(){} // The real PDF walls/windows are rendered by the shared floor groups.
  function rail(axis,fixed,a,b,y){const g=new T.Group();root.add(g);if(axis==='z'){g.rotation.y=-Math.PI/2;g.position.x=fixed}else g.position.z=fixed;box(g,(a+b)/2,y+.57,0,b-a,.8,.025,railglass);box(g,(a+b)/2,y+1.02,0,b-a,.035,.045,frame);const count=Math.ceil((b-a)/1.5);for(let i=0;i<=count;i++)box(g,a+(b-a)*i/count,y+.51,0,.035,1.02,.035,frame)}
  const coping=material(0xb6b8b3,.34);coping.metalness=.58;
- function cap(x0,x1,z0,z1,y){const start=root.children.length;box(root,(x0+x1)/2,y-.12,(z0+z1)/2,x1-x0,.42,z1-z0,roof);for(const z of [z0,z1]){box(root,(x0+x1)/2,y+.2,z,x1-x0,.4,.18);box(root,(x0+x1)/2,y+.408,z,x1-x0+.08,.024,.23,coping)}for(const x of [x0,x1]){box(root,x,y+.2,(z0+z1)/2,.18,.4,z1-z0);box(root,x,y+.408,(z0+z1)/2,.23,.024,z1-z0+.08,coping)}roofs.push(...root.children.slice(start))}
+ function cap(id,x0,x1,z0,z1,y){const start=root.children.length;box(root,(x0+x1)/2,y-.12,(z0+z1)/2,x1-x0,.42,z1-z0,roof);for(const z of [z0,z1]){box(root,(x0+x1)/2,y+.2,z,x1-x0,.4,.18);box(root,(x0+x1)/2,y+.408,z,x1-x0+.08,.024,.23,coping)}for(const x of [x0,x1]){box(root,x,y+.2,(z0+z1)/2,.18,.4,z1-z0);box(root,x,y+.408,(z0+z1)/2,.23,.024,z1-z0+.08,coping)}roofs.push(...root.children.slice(start));roofSurfaces.push({id,x0,x1,z0,z1,top:y+.09})}
  function balcony(axis,fixed,a,b,y,depth=1.7,sign=1){const center=fixed+sign*depth/2;if(axis==='x'){box(root,(a+b)/2,y-.1,center,b-a,.2,depth);box(root,(a+b)/2,y+.13,fixed+sign*depth,b-a,.42,.16);rail('x',fixed+sign*depth,a,b,y+.26);rail('z',a,Math.min(fixed,fixed+sign*depth),Math.max(fixed,fixed+sign*depth),y+.26);rail('z',b,Math.min(fixed,fixed+sign*depth),Math.max(fixed,fixed+sign*depth),y+.26)}else{box(root,center,y-.1,(a+b)/2,depth,.2,b-a);box(root,fixed+sign*depth,y+.13,(a+b)/2,.16,.42,b-a);rail('z',fixed+sign*depth,a,b,y+.26);rail('x',a,Math.min(fixed,fixed+sign*depth),Math.max(fixed,fixed+sign*depth),y+.26);rail('x',b,Math.min(fixed,fixed+sign*depth),Math.max(fixed,fixed+sign*depth),y+.26)}}
  // Long southern elevation, continuous balconies and recessed third storey.
  const bays=[-25.5,-20.7,-15.9,-11.1,-6.3,-1.5,3.3,8.1,12.9,17.7,22.5,26.4];
@@ -33,7 +34,7 @@ export function buildExterior(){
   
   if(f<2)balcony('x',front,x0,x1,y,1.8,-1);
  }
- cap(-23.68,23.73,-20.87,-12.08,levels[3]);
+ cap('long-wing',-23.68,23.73,-20.87,-12.08,levels[3]);
  // A single U-shaped top deck joins both end terraces to the front balcony.
  // Rail only exposed edges; the two 3.05 m connections and facade doors stay clear.
  const deckOutline=[[-28.85,-23.92],[28.85,-23.92],[28.85,-10.08],[23.73,-10.08],[23.73,-20.87],[-23.68,-20.87],[-23.68,-10.08],[-28.85,-10.08]];
@@ -42,8 +43,8 @@ export function buildExterior(){
  const deckRails=[['x',-23.92,-28.85,28.85],['z',-28.85,-23.92,-10.08],['z',28.85,-23.92,-10.08],['x',-10.08,-28.85,-23.68],['x',-10.08,23.73,28.85],['z',-23.68,-12.08,-10.08],['z',23.73,-12.08,-10.08]];
  for(const [axis,fixed,a,b] of deckRails){rail(axis,fixed,a,b,levels[2]);if(axis==='x')box(root,(a+b)/2,levels[2]-.12,fixed,b-a,.24,.08,white);else box(root,fixed,levels[2]-.12,(a+b)/2,.08,.24,b-a,white)}
  // Connecting stair wing; fourth floor retained from the proposed drawings.
- for(let f=0;f<3;f++){const y=levels[f];for(const x of [-4.78,5.02])facade('z',x,-10.8,-1.4,y,2.78,[[-8,1.4,1.1,1.1],[-4.5,1.65,.12,2.2]]);}cap(-4.81,4.91,-12.2,-1.35,levels[3]);
- for(const x of [-4.78,4.86])facade('z',x,-9.32,-1,levels[3],2.4,[],stone);for(const z of [-9.32,-1])facade('x',z,-4.78,4.86,levels[3],2.4,z===-9.32?[[.8,1,0,2.1]]:[],stone);cap(-4.82,4.89,-9.35,-.96,levels[3]+2.78);
+ for(let f=0;f<3;f++){const y=levels[f];for(const x of [-4.78,5.02])facade('z',x,-10.8,-1.4,y,2.78,[[-8,1.4,1.1,1.1],[-4.5,1.65,.12,2.2]]);}cap('connector',-4.81,4.91,-12.2,-1.35,levels[3]);
+ for(const x of [-4.78,4.86])facade('z',x,-9.32,-1,levels[3],2.4,[],stone);for(const z of [-9.32,-1])facade('x',z,-4.78,4.86,levels[3],2.4,z===-9.32?[[.8,1,0,2.1]]:[],stone);cap('technical-floor',-4.82,4.89,-9.35,-.96,levels[3]+2.78);
  // Short garden wing: raised garden level, white lower facade, dark upper cladding.
 
  for(let f=1;f<3;f++){const y=levels[f],m=f===2?stone:white;
@@ -51,7 +52,7 @@ export function buildExterior(){
   facade('x',-1.4,-8.1,10.3,y,2.78,[[-6.3,1.3,.2,2.1],[7.9,1.5,.2,2.1]],m);
   for(const x of [-7.94,10.89]){facade('z',x,-1.4,15.85,y,2.78,[[.8,1.5,.1,2.25],[4.5,2.4,.1,2.25],[8.6,2.6,.1,2.25],[12.8,2.4,.1,2.25]],m);if(x<0){balcony('z',x,-1.42,16.01,y,1.4,-1);for(const z of [-1.4,3.1,7.7,12.3,15.85])box(root,x-1.27,y+(levels[f+1]-y)/2,z,.26,levels[f+1]-y,.28,white)}else for(const z of [4.5,10.9])balcony('z',x,z-1.5,z+1.5,y,1.1)}
   
- }cap(-7.94,10.89,-1.42,16.01,levels[3]);
+ }cap('garden-wing',-7.94,10.89,-1.42,16.01,levels[3]);
  // D7 is on the side facing the ramp: 5500 x 3000, threshold +2.780.
  const gx=garage.x1,gz=(garage.doorZ0+garage.doorZ1)/2;
  const door=new T.Group();door.name='Garage D7';root.add(door);
@@ -59,7 +60,7 @@ export function buildExterior(){
  for(let y=garage.floor+.08;y<garage.floor+garage.doorHeight;y+=.15)box(door,gx+.06,y,gz,.025,.022,5.5,roof);
  for(const z of [garage.doorZ0-.07,garage.doorZ1+.07])box(root,gx+.025,garage.floor+1.54,z,.2,3.08,.14,white);
  box(root,gx+.025,garage.floor+3.08,gz,.2,.16,5.78,white);
- cap(garage.x0,garage.x1,garage.z0,garage.z1,levels[2]);
+ cap('garage',garage.x0,garage.x1,garage.z0,garage.z1,levels[2]);
  box(root,(garage.x1+ramp.x0)/2,garage.floor/2,(ramp.z0+ramp.z1)/2,ramp.x0-garage.x1,garage.floor,ramp.z1-ramp.z0,paving);
  // Ramp surface and solid supporting wedge; 6 degrees from plan, no suspended plane.
  const vertices=[ramp.x0,ramp.top,ramp.z0,ramp.x0,ramp.top,ramp.z1,ramp.x1,ramp.bottom,ramp.z1,ramp.x0,ramp.top,ramp.z0,ramp.x1,ramp.bottom,ramp.z1,ramp.x1,ramp.bottom,ramp.z0];
@@ -98,5 +99,6 @@ export function buildExterior(){
  // Compact timber play structures visible in the landscape references.
  for(const x of [-24,26]){box(root,x,2.59,15,4.5,.09,4,roof);for(const dx of [-.75,.75])for(const dz of [-.6,.6])box(root,x+dx,3.65,15+dz,.12,2.1,.12,wood);box(root,x,4.55,15,1.8,.12,1.6,wood);for(let i=0;i<5;i++)box(root,x,2.9+i*.3,16-i*.15,1,.08,.15,wood)}
 
- root.userData={reference:'PDF geometry with facade details',estimatedTerrain:true,roofs,garageDoor:door,deckOutline,deckRails,site,parkingStorage};return root;
+ const photovoltaics=buildPhotovoltaics(roofSurfaces);root.add(photovoltaics);roofs.push(photovoltaics);
+ root.userData={reference:'PDF geometry with facade details',estimatedTerrain:true,roofs,roofSurfaces,photovoltaics,garageDoor:door,deckOutline,deckRails,site,parkingStorage};return root;
 }
