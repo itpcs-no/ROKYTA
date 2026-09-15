@@ -23,7 +23,7 @@ export function buildSportsLandscape(){
  const zset=new Set();for(let z=s.z0;z<=s.z1;z++)zset.add(z);zset.add(hillsideParking.back);for(const h of hillsideHomes){zset.add(h.pool.z0);zset.add(h.pool.z1)}const zs=[...zset].sort((a,b)=>a-b);
  const points=[],indices=[];for(const z of zs)for(const x of xs)points.push(x,courtTerrainHeight(x,z,base),z);
  for(let j=0;j<zs.length-1;j++)for(let i=0;i<xs.length-1;i++){if(hillsideHomes.some(h=>inRect((xs[i]+xs[i+1])/2,(zs[j]+zs[j+1])/2,h.pool)))continue;const a=j*xs.length+i,b=a+1,c=a+xs.length,d=c+1;indices.push(a,c,b,b,c,d)}
- const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(points,3));geo.setIndex(indices);geo.computeVertexNormals();
+ const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(points,3));geo.setIndex(indices);geo.computeVertexNormals();geo.userData.uvProjection='xz';
  const hill=new T.Mesh(geo,grass);hill.name='Continuous graded hill';hill.receiveShadow=true;hill.castShadow=true;root.add(hill);
  // The mound's front meets the existing road without taking over its surface.
  const skirt=[];for(let i=0;i<xs.length-1;i++){const x=xs[i],xx=xs[i+1];if(parkingBlockAt((x+xx)/2,s.z0))continue;const a=courtTerrainHeight(x,s.z0,base),b=courtTerrainHeight(xx,s.z0,base);skirt.push(x,-.06,s.z0,xx,b,s.z0,x,a,s.z0,x,-.06,s.z0,xx,-.06,s.z0,xx,b,s.z0)}

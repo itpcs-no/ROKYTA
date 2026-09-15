@@ -4,6 +4,8 @@ import {createPlanting} from './planting.js';
 import {ramp,exteriorHeight} from './project-geometry.js';
 import {courtTerrainHeight} from './court-layout.js';
 import {entrance,serviceHouse,serviceShed,servicePaving,siteRoads,siteShoulderHeight,boundarySegments} from './site-layout.js';
+import {homeRoads} from './homes-layout.js';
+import {subtractTopSurfaces,roadOutline,roadEdges} from './surface-geometry.js';
 
 export function buildSiteBoundary(){
  const root=new T.Group();root.name='Príjazd, obvod areálu a vedľajšie objekty';
@@ -14,29 +16,32 @@ export function buildSiteBoundary(){
  const glass=glassMaterial();
  const box=(x,y,z,w,h,d,m=plaster,g=root)=>{const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=!m.transparent;o.receiveShadow=true;g.add(o);return o};
  function mesh(points,indices,material,name){const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(points,3));geo.setIndex(indices);geo.computeVertexNormals();const m=new T.Mesh(geo,material);m.castShadow=true;m.receiveShadow=true;m.name=name;root.add(m);return m}
- function solidPolygon(poly,y,m,name){const shape=new T.Shape();poly.forEach(([x,z],i)=>i?shape.lineTo(x,-z):shape.moveTo(x,-z));shape.closePath();const geo=new T.ExtrudeGeometry(shape,{depth:y+.12,bevelEnabled:false});geo.rotateX(-Math.PI/2);const o=new T.Mesh(geo,m);o.position.y=-.12;o.receiveShadow=true;o.castShadow=true;o.name=name;root.add(o)}
+ function solidPolygon(poly,y,m,name){const shape=new T.Shape();poly.forEach(([x,z],i)=>i?shape.lineTo(x,-z):shape.moveTo(x,-z));shape.closePath();const geo=new T.ExtrudeGeometry(shape,{depth:y+.12,bevelEnabled:false});geo.rotateX(-Math.PI/2);const o=new T.Mesh(geo,m);o.position.y=-.12;o.receiveShadow=true;o.castShadow=true;o.name=name;root.add(o);return o}
+ const cellarLink=[[-48.6,-9.95],[-37,-9.95],[-37,-5.65],[-48.6,-5.65]];
  // Continuous ribbons share the same sampled centreline as walking/driving heights.
  // The full-depth side faces close the fill down to the existing ground plane.
  for(const road of siteRoads(ramp.bottom)){
   const p=[],top=[],side=[],ps=road.points;
-  ps.forEach((a,i)=>{const prev=ps[Math.max(0,i-1)],next=ps[Math.min(ps.length-1,i+1)],dx=next[0]-prev[0],dz=next[1]-prev[1],len=Math.hypot(dx,dz),nx=-dz/len,nz=dx/len;
-   for(const s of [-1,1])p.push(a[0]+s*nx*road.width/2,a[2],a[1]+s*nz*road.width/2);
-   for(const s of [-1,1])p.push(a[0]+s*nx*road.width/2,-.12,a[1]+s*nz*road.width/2);
-   if(i){const a=(i-1)*4,b=i*4;top.push(a,b,a+1,a+1,b,b+1);side.push(a,a+2,b,a+2,b+2,b,b+1,b+3,a+1,b+3,a+3,a+1)}
+  roadEdges(road).forEach((edges,i)=>{
+   for(const point of edges)p.push(...point);
+   for(const [x,y,z] of edges)p.push(x,-.12,z);
+   if(i){const a=(i-1)*4,b=i*4;top.push(a,a+1,b,a+1,b+1,b);side.push(a,a+2,b,a+2,b+2,b,b+1,b+3,a+1,b+3,a+3,a+1)}
   });
-  const surf=asphalt.clone();surf.side=T.DoubleSide;mesh(p,top,surf,road.name).userData.walkSurface=true;
+  const surfaceMesh=mesh(p,top,asphalt,road.name);surfaceMesh.userData.walkSurface=true;surfaceMesh.geometry.userData.uvProjection='xz';
+  subtractTopSurfaces(surfaceMesh,[servicePaving,cellarLink,...homeRoads(ramp.bottom).map(roadOutline)]);
   const fill=concrete.clone();fill.side=T.DoubleSide;side.push(0,1,2,1,3,2);const n=(ps.length-1)*4;side.push(n,n+2,n+1,n+1,n+2,n+3);mesh(p,side,fill,'Plné podložie cesty');
  }
  solidPolygon(servicePaving,.06,paving,'Spevnený dvor pri vedľajších objektoch');
- solidPolygon([[-48.6,-9.95],[-37,-9.95],[-37,-5.65],[-48.6,-5.65]],.06,paving,'Napojenie kobiek na obvodovú cestu');
+ subtractTopSurfaces(solidPolygon(cellarLink,.06,paving,'Napojenie kobiek na obvodovú cestu'),[servicePaving]);
  solidPolygon([[-37,-49],[-35,-49],[-35,-43.5],[-37,-43.5]],.06,paving,'Peší výstup z areálu');
  // Graded grass shoulders: no suspended asphalt sheets or exposed open undersides.
- const tp=[],ti=[];
- for(let x=-66;x<59;x+=.6)for(let z=-66;z<71;z+=.6){
-  const v=[[x,z],[x+.6,z],[x+.6,z+.6],[x,z+.6]],ys=v.map(([x,z])=>siteShoulderHeight(x,z,ramp.bottom));
-  if(ys.some(y=>y===null))continue;const n=tp.length/3;v.forEach(([x,z],i)=>tp.push(x,ys[i],z));ti.push(n,n+2,n+1,n,n+3,n+2);
+ const tp=[],ti=[],grid=new Map(),nx=Math.ceil(125/.6),nz=Math.ceil(137/.6);
+ const vertex=(i,j)=>{const key=i*(nz+1)+j;if(grid.has(key))return grid.get(key);const x=-66+i*.6,z=-66+j*.6,y=siteShoulderHeight(x,z,ramp.bottom);const index=y===null?null:tp.length/3;if(index!==null)tp.push(x,y,z);grid.set(key,index);return index};
+ for(let i=0;i<nx;i++)for(let j=0;j<nz;j++){
+  const corners=[vertex(i,j),vertex(i+1,j),vertex(i+1,j+1),vertex(i,j+1)];
+  if(corners.some(v=>v===null))continue;const [a,b,c,d]=corners;ti.push(a,c,b,a,d,c);
  }
- mesh(tp,ti,grass,'Trávnaté svahy pri príjazde');
+ mesh(tp,ti,grass,'Trávnaté svahy pri príjazde').geometry.userData.uvProjection='xz';
  // Wall bases follow terrain in short panels; overlapping footings prevent gaps.
  const terrain=(x,z)=>Math.max(-.06,courtTerrainHeight(x,z,ramp.bottom)??exteriorHeight(x,z)-.02);
  const bars=new Map();

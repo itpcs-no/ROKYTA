@@ -48,7 +48,7 @@ export function siteShoulderHeight(x,z,level){
  let y=null;
  for(const road of siteRoads(level)){
   const p=closestRoad(x,z,road),r=road.width/2;
-  if(p.distance>r&&p.distance<r+3.6){const t=clamp((p.distance-r)/3.6);y=Math.max(y??-.06,p.height*(1-t)-.06*t-.025)}
+  if(p.distance>r&&p.distance<r+3.6){const t=clamp((p.distance-r)/3.6);y=Math.max(y??-.06,(p.height-.025)*(1-t)-.06*t)}
  }return y;
 }
 export const siteBoundary=[
