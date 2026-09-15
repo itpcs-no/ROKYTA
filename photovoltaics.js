@@ -29,13 +29,15 @@ export function layoutPhotovoltaics(roofs){
 function siliconTexture(){
  const width=768,height=512,data=new Uint8Array(width*height*4);
  for(let y=0;y<height;y++)for(let x=0;x<width;x++){
-  const u=x/width,v=y/height,cx=u*12,cy=v*6,fx=cx%1,fy=cy%1;
+  const frameU=.0225/moduleSize.width,frameV=.0225/moduleSize.length;
+  const u=(x/width-frameU)/(1-2*frameU),v=(y/height-frameV)/(1-2*frameV),cx=u*12,cy=v*6,fx=cx%1,fy=cy%1;
+  const frame=u<0||u>1||v<0||v>1;
   const border=Math.min(fx,1-fx)<.012||Math.min(fy,1-fy)<.012;
   const corner=Math.min(fx,1-fx)+Math.min(fy,1-fy)<.045;
   const split=Math.abs(u-.5)<.003;
   const wire=Math.min((fx*5)%1,1-(fx*5)%1)<.024;
   const variation=1+.035*Math.sin(Math.floor(cx)*17+Math.floor(cy)*31);
-  const color=border||corner||split?[67,81,90]:wire?[37,57,70]:[17,33,48];
+  const color=frame?[102,116,123]:border||corner||split?[67,81,90]:wire?[37,57,70]:[17,33,48];
   const i=(y*width+x)*4;
   for(let k=0;k<3;k++)data[i+k]=Math.round(color[k]*variation);
   data[i+3]=255;
@@ -54,20 +56,21 @@ export function buildPhotovoltaics(roofs){
  const silicon=new T.MeshPhysicalMaterial({map:siliconTexture(),metalness:.2,roughness:.24,clearcoat:.8,clearcoatRoughness:.16,envMapIntensity:1.1});
  const steel=new T.MeshStandardMaterial({color:0x738087,metalness:.78,roughness:.43});
  const concrete=new T.MeshStandardMaterial({color:0x9a9d97,roughness:.94});
- const body=new T.InstancedMesh(new T.BoxGeometry(width,thickness,length),aluminum,panels.length);
- const faceGeometry=new T.PlaneGeometry(width-.045,length-.045);faceGeometry.rotateX(-Math.PI/2);
- const faces=new T.InstancedMesh(faceGeometry,silicon,panels.length);
+ // Silicon is the actual top face of the module. There is no aluminum face
+ // one millimetre underneath it competing for the same depth-buffer value.
+ const geometry=new T.BoxGeometry(width,thickness,length),top=[],shell=[];
+ for(const group of geometry.groups)for(let i=group.start;i<group.start+group.count;i++)(group.materialIndex===2?top:shell).push(geometry.index.getX(i));
+ geometry.setIndex([...shell,...top]);geometry.clearGroups();geometry.addGroup(0,shell.length,0);geometry.addGroup(shell.length,top.length,1);
+ const body=new T.InstancedMesh(geometry,[aluminum,silicon],panels.length);silicon.name='Photovoltaic silicon cells';
  const hardware=new T.InstancedMesh(new T.BoxGeometry(1,1,1),steel,panels.length*6);
  const ballast=new T.InstancedMesh(new T.BoxGeometry(.24,.06,.34),concrete,panels.length*4);
- body.name='Photovoltaic aluminum frames';faces.name='Photovoltaic silicon cells';hardware.name='Photovoltaic mounting rails and legs';ballast.name='Photovoltaic roof ballast';
+ body.name='Photovoltaic aluminum frames';hardware.name='Photovoltaic mounting rails and legs';ballast.name='Photovoltaic roof ballast';
  const matrix=new T.Matrix4(),one=new T.Vector3(1,1,1),scale=new T.Vector3(),position=new T.Vector3();
  const rotation=new T.Quaternion().setFromEuler(new T.Euler(-tilt,0,0)),upright=new T.Quaternion();
  let hardwareIndex=0,ballastIndex=0;
  panels.forEach((panel,i)=>{
   const center=new T.Vector3(panel.x,panel.y,panel.z);
   body.setMatrixAt(i,matrix.compose(center,rotation,one));
-  position.set(0,thickness/2+.001,0).applyQuaternion(rotation).add(center);
-  faces.setMatrixAt(i,matrix.compose(position,rotation,one));
   for(const localZ of [-length*.3,length*.3]){
    position.set(0,-thickness/2-.026,localZ).applyQuaternion(rotation).add(center);
    hardware.setMatrixAt(hardwareIndex++,matrix.compose(position,rotation,scale.set(width-.16,.052,.065)));
@@ -82,8 +85,8 @@ export function buildPhotovoltaics(roofs){
    }
   }
  });
- for(const mesh of [body,faces,hardware,ballast]){
-  mesh.castShadow=mesh!==faces;mesh.receiveShadow=true;mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingBox();mesh.computeBoundingSphere();root.add(mesh);
+ for(const mesh of [body,hardware,ballast]){
+  mesh.castShadow=true;mesh.receiveShadow=true;mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingBox();mesh.computeBoundingSphere();root.add(mesh);
  }
  return root;
 }

@@ -6,7 +6,8 @@ import {buildSportsLandscape} from './sports-landscape.js';
 import {buildSiteBoundary} from './site-boundary.js';
 import {buildParkingAndStorage} from './parking-storage.js';
 import {buildPhotovoltaics} from './photovoltaics.js';
-import {courtTerrainHeight} from './court-layout.js';
+import {courtSite,courtTerrainHeight} from './court-layout.js';
+import {subtractTopSurfaces,rectOutline} from './surface-geometry.js';
 import {garage,ramp,pool,levels,footprints,gardenStairs,access} from './project-geometry.js';
 // Visual reconstruction of the 1 August 2018 references, fitted to the PDF footprint.
 // Facade opening rhythm and terrain are estimates, not measured survey geometry.
@@ -68,9 +69,15 @@ export function buildExterior(){
  const rg=new T.BufferGeometry();rg.setAttribute('position',new T.Float32BufferAttribute(vertices,3));rg.computeVertexNormals();const rm=paving.clone();rm.side=T.DoubleSide;const rampMesh=new T.Mesh(rg,rm);rampMesh.receiveShadow=true;rampMesh.castShadow=true;root.add(rampMesh);
  const drive=box(root,(access.x0+access.x1)/2,access.level/2,(access.z0+access.z1)/2,access.x1-access.x0,access.level,access.z1-access.z0,paving);drive.name='Unobstructed garage approach';
  // Lower drive, two planted terraces, storage rooms beneath the old grass roof.
- const groundShape=new T.Shape();groundShape.moveTo(-700,700);groundShape.lineTo(700,700);groundShape.lineTo(700,-700);groundShape.lineTo(-700,-700);groundShape.closePath();const hole=new T.Path();hole.moveTo(pool.x0,-pool.z0);hole.lineTo(pool.x1,-pool.z0);hole.lineTo(pool.x1,-pool.z1);hole.lineTo(pool.x0,-pool.z1);hole.closePath();groundShape.holes.push(hole);const groundGeo=new T.ShapeGeometry(groundShape);groundGeo.rotateX(-Math.PI/2);const groundMesh=new T.Mesh(groundGeo,lawn);groundMesh.position.y=-.06;groundMesh.receiveShadow=true;root.add(groundMesh);box(root,0,-.01,-7.8,74,.14,4.3,paving);
+ const groundShape=new T.Shape();groundShape.moveTo(-700,700);groundShape.lineTo(700,700);groundShape.lineTo(700,-700);groundShape.lineTo(-700,-700);groundShape.closePath();
+ // The graded hill replaces this part of the ground, including its outer edge.
+ // Keeping the original plane below it produced coplanar grass triangles.
+ for(const rect of [pool,courtSite]){const hole=new T.Path();rectOutline(rect).forEach(([x,z],i)=>i?hole.lineTo(x,-z):hole.moveTo(x,-z));hole.closePath();groundShape.holes.push(hole)}
+ const groundGeo=new T.ShapeGeometry(groundShape);groundGeo.rotateX(-Math.PI/2);groundGeo.userData.uvProjection='xz';const groundMesh=new T.Mesh(groundGeo,lawn);groundMesh.position.y=-.06;groundMesh.receiveShadow=true;groundMesh.name='Ground outside the graded hill';root.add(groundMesh);
+ const lowerPath=box(root,0,-.01,-7.8,74,.14,4.3,paving);lowerPath.name='Lower garden walkway';
+ subtractTopSurfaces(lowerPath,[rectOutline({x0:-35.5,x1:-10.5,z0:-8.8,z1:-.8})]);
  for(const side of [-1,1]){const x=side<0?-23:25;box(root,x,1.24,side<0?12.505:10.5,19,2.48,side<0?21.99:26,earth);box(root,x,2.51,10.5,19,.08,26,lawn);box(root,x,1.22,side<0?1.51:-2.5,19,2.48,.23,white);box(root,x,2.525,12.8,19,.1,1.5,paving);box(root,x,2.51,22.4,19,.13,4,paving)}
- box(root,-23,.0,-4.8,25,.12,8,paving);const cellarRoof=box(root,-23,2.35,-1.6,25,.22,6.2,white);box(root,-23,2.49,-1.6,25,.08,6.2,lawn);const cellarBack=box(root,-23,1.1,1.4,25,2.3,.22,white);for(let x=-35.5;x<=-10.5;x+=3.125)box(root,x,1.1,-4.7,.25,2.3,.25,white);
+ box(root,-23,.0,-4.8,25,.12,8,paving).name='Cellar courtyard';const cellarRoof=box(root,-23,2.35,-1.6,25,.22,6.2,white);box(root,-23,2.49,-1.6,25,.08,6.2,lawn);const cellarBack=box(root,-23,1.1,1.4,25,2.3,.22,white);for(let x=-35.5;x<=-10.5;x+=3.125)box(root,x,1.1,-4.7,.25,2.3,.25,white);
  root.add(buildParkedCars());
  const parkingStorage=buildParkingAndStorage();parkingStorage.userData.occluders.push(cellarRoof,cellarBack);root.add(parkingStorage);
  // Flush drainage grating at the garage threshold; no new obstacle on the ramp.

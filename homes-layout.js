@@ -27,7 +27,7 @@ export function homeRoads(base){
  for(let i=0;i<=70;i++){const s=straight*i/70;ramp.push([37,30.5+s,height(s)])}
  for(let i=1;i<=60;i++){const angle=Math.PI/2*i/60;ramp.push([23.5+radius*Math.cos(angle),62+radius*Math.sin(angle),height(straight+radius*angle)])}
  const upper=[];for(let x=23.5;x>=-54;x-=.5)upper.push([x,75.5,homesLevel]);
- const result=[{name:'Plynulý príjazd k rodinným domom',width:5.2,points:ramp},{name:'Cesta ku garážam rodinných domov',width:5.2,points:upper}];
+ const result=[{name:'Plynulý príjazd k rodinným domom',width:5.2,points:ramp,endDirection:[-1,0]},{name:'Cesta ku garážam rodinných domov',width:5.2,points:upper}];
  for(const road of result){const pad=road.width/2+3.5;road.bounds={x0:Math.min(...road.points.map(p=>p[0]))-pad,x1:Math.max(...road.points.map(p=>p[0]))+pad,z0:Math.min(...road.points.map(p=>p[1]))-pad,z1:Math.max(...road.points.map(p=>p[1]))+pad}}
  roadCache.set(base,result);return result;
 }

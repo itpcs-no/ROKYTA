@@ -2,6 +2,7 @@ import * as T from 'three';
 import {surface,glassMaterial} from './surface-materials.js';
 import {createPlanting} from './planting.js';
 import {hillsideHomes,homesLevel,homeRoads} from './homes-layout.js';
+import {subtractTopSurfaces,rectOutline,roadEdges} from './surface-geometry.js';
 
 export function buildHillsideHomes(roadBase){
  const root=new T.Group();root.name='Dva rodinné domy namiesto kurtov';
@@ -14,15 +15,16 @@ export function buildHillsideHomes(roadBase){
  };
  function solidRoad(road){
   const p=[],idx=[],side=[],ps=road.points;
-  ps.forEach((a,i)=>{const before=ps[Math.max(0,i-1)],after=ps[Math.min(ps.length-1,i+1)],dx=after[0]-before[0],dz=after[1]-before[1],len=Math.hypot(dx,dz),nx=-dz/len,nz=dx/len;
-   for(const sign of [-1,1])p.push(a[0]+sign*nx*road.width/2,a[2],a[1]+sign*nz*road.width/2);
-   for(const sign of [-1,1])p.push(a[0]+sign*nx*road.width/2,-.12,a[1]+sign*nz*road.width/2);
-   if(i){const a=(i-1)*4,b=i*4;idx.push(a,b,a+1,a+1,b,b+1);side.push(a,a+2,b,a+2,b+2,b,b+1,b+3,a+1,b+3,a+3,a+1)}
+  roadEdges(road).forEach((edges,i)=>{
+   for(const point of edges)p.push(...point);
+   for(const [x,y,z] of edges)p.push(x,-.12,z);
+   if(i){const a=(i-1)*4,b=i*4;idx.push(a,a+1,b,a+1,b+1,b);side.push(a,a+2,b,a+2,b+2,b,b+1,b+3,a+1,b+3,a+3,a+1)}
   });
   const n=(ps.length-1)*4;side.push(0,1,2,1,3,2,n,n+2,n+1,n+1,n+2,n+3);
   for(const [indices,mat,name] of [[idx,surface('asphalt'),road.name],[side,concrete,'Plné podložie príjazdu k domom']]){
    const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(p,3));geometry.setIndex(indices);geometry.computeVertexNormals();
    const material=mat.clone();material.side=T.DoubleSide;const mesh=new T.Mesh(geometry,material);mesh.name=name;mesh.receiveShadow=true;mesh.castShadow=true;root.add(mesh);
+   if(indices===idx){mesh.material.side=T.FrontSide;geometry.userData.uvProjection='xz';subtractTopSurfaces(mesh,hillsideHomes.map(h=>rectOutline(h.drive)))}
   }
  }
  for(const road of homeRoads(roadBase))solidRoad(road);
@@ -106,7 +108,8 @@ export function buildHillsideHomes(roadBase){
   const water=new T.Mesh(new T.PlaneGeometry(pw,pd),waterMaterial);water.rotation.x=-Math.PI/2;water.position.set(px,p.water,pz);water.name=`Voda bazéna domu ${h.id}`;group.add(water);
   for(const dx of [-.26,.26])box(group,px+dx,y-.19,p.z1-.14,.038,1.3,.038,metal);
   for(const ly of [y-.62,y-.32,y-.02])box(group,px,ly,p.z1-.14,.56,.035,.038,metal);
-  const drive=h.drive;box(group,(drive.x0+drive.x1)/2,y-.12,(drive.z0+drive.z1)/2,drive.x1-drive.x0,.24,drive.z1-drive.z0,paving).name=`Príjazd ku garáži domu ${h.id}`;
+  const drive=h.drive,apron=box(group,(drive.x0+drive.x1)/2,y-.12,(drive.z0+drive.z1)/2,drive.x1-drive.x0,.24,drive.z1-drive.z0,paving);apron.name=`Príjazd ku garáži domu ${h.id}`;
+  subtractTopSurfaces(apron,[rectOutline({x0:h.x0-.15,x1:h.x1+.15,z0:h.z0-.15,z1:h.z1+.15})]);
   // Existing pedestrian landing branches to the two new front entrances.
   box(group,h.entryX,y-.08,(48.5+terrace.z0)/2,1.5,.16,terrace.z0-48.5,paving).name=`Chodník k domu ${h.id}`;
   for(const z of [h.z0+1.5,h.z0+4,h.z0+6.5])plants.shrub(h.x0-1.2,z,y-.04,.45);

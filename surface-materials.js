@@ -73,16 +73,21 @@ export function glassMaterial(railing=false){
  m.name=railing?'Balcony glass':'Window glass';return m;
 }
 export function finishSurfaces(root,renderer){
- const done=new WeakSet();root.traverse(mesh=>{
+ const done=new WeakSet(),filtered=new WeakSet(),anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());root.traverse(mesh=>{
   if(!mesh.isMesh)return;const mats=Array.isArray(mesh.material)?mesh.material:[mesh.material];
+  for(const m of mats)for(const texture of [m.map,m.bumpMap,m.normalMap,m.roughnessMap])if(texture&&!filtered.has(texture)){
+   filtered.add(texture);texture.anisotropy=anisotropy;texture.needsUpdate=true;
+  }
   if(!mats.some(m=>m.userData.metreUV)||done.has(mesh.geometry))return;
   done.add(mesh.geometry);const geo=mesh.geometry,p=geo.attributes.position,n=geo.attributes.normal;
   if(!p||!n)return;const uv=new Float32Array(p.count*2);
   for(let i=0;i<p.count;i++){
+   // Height fields keep one projection even where a steep slope changes its
+   // dominant normal. Switching axes at individual vertices stretches triangles.
+   if(geo.userData.uvProjection==='xz'){uv[i*2]=p.getX(i);uv[i*2+1]=p.getZ(i);continue}
    const nx=Math.abs(n.getX(i)),ny=Math.abs(n.getY(i)),nz=Math.abs(n.getZ(i));
    uv[i*2]=nx>ny&&nx>nz?p.getZ(i):p.getX(i);uv[i*2+1]=ny>nx&&ny>nz?p.getZ(i):p.getY(i);
   }
   geo.setAttribute('uv',new T.BufferAttribute(uv,2));
-  for(const m of mats)for(const t of [m.map,m.bumpMap])if(t)t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
  });
 }
