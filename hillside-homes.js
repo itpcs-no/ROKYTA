@@ -1,12 +1,13 @@
 import * as T from 'three';
 import {surface,glassMaterial} from './surface-materials.js';
+import {makeWaterMaterial,addPoolCaustics} from './water-material.js';
 import {createPlanting} from './planting.js';
 import {hillsideHomes,homesLevel,homeRoads} from './homes-layout.js';
 import {subtractTopSurfaces,rectOutline,roadEdges} from './surface-geometry.js';
 
 export function buildHillsideHomes(roadBase){
  const root=new T.Group();root.name='Dva rodinné domy namiesto kurtov';
- const white=surface('plaster'),wood=surface('wood'),stone=surface('stone'),paving=surface('paving'),concrete=surface('concrete'),roofMaterial=surface('roof'),tile=surface('pool');
+ const white=surface('plaster'),wood=surface('wood'),stone=surface('stone'),paving=surface('paving'),concrete=surface('concrete'),roofMaterial=surface('roof'),tile=addPoolCaustics(surface('pool'));
  const metal=new T.MeshStandardMaterial({color:0x38444b,metalness:.7,roughness:.32});
  const glass=glassMaterial(),railingGlass=glassMaterial(true),occluders=[],shutters=[],entryDoors=[];
  const box=(g,x,y,z,w,h,d,m=white,occlude=false)=>{
@@ -104,7 +105,7 @@ export function buildHillsideHomes(roadBase){
   for(const z of [p.z0-.07,p.z1+.07])box(group,px,(p.bottom+y)/2,z,pw,y-p.bottom,.14,tile);
   for(const x of [p.x0-.13,p.x1+.13])box(group,x,y+.015,pz,.25,.03,pd+.5,white);
   for(const z of [p.z0-.13,p.z1+.13])box(group,px,y+.015,z,pw,.03,.25,white);
-  const waterMaterial=new T.MeshPhysicalMaterial({color:0x399eaf,metalness:.12,roughness:.09,transparent:true,opacity:.63,clearcoat:1,clearcoatRoughness:.07,envMapIntensity:1.3,side:T.DoubleSide});
+  const waterMaterial=makeWaterMaterial();
   const water=new T.Mesh(new T.PlaneGeometry(pw,pd),waterMaterial);water.rotation.x=-Math.PI/2;water.position.set(px,p.water,pz);water.name=`Voda bazéna domu ${h.id}`;group.add(water);
   for(const dx of [-.26,.26])box(group,px+dx,y-.19,p.z1-.14,.038,1.3,.038,metal);
   for(const ly of [y-.62,y-.32,y-.02])box(group,px,ly,p.z1-.14,.56,.035,.038,metal);

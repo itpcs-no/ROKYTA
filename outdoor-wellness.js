@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {surface} from './surface-materials.js';
+import {makeWaterMaterial,addPoolCaustics} from './water-material.js';
 import {createPlanting} from './planting.js';
 import {rectOutline} from './surface-geometry.js';
 import {wellnessLevel,wellnessOutline,wellnessBasins,wellnessLoungers,wellnessPergola,wellnessPosts,wellnessBeds,wellnessTrees,wellnessLights,basinOutline} from './wellness-layout.js';
@@ -8,7 +9,7 @@ export function buildOutdoorWellness(){
  const root=new T.Group();root.name='Vonkajší bazén a záhradné wellness';
  const paving=surface('paving').clone();paving.color.set(0xf0e7d4);
  const coping=surface('concrete').clone();coping.color.set(0xe5ddc9);
- const tile=surface('pool'),wood=surface('wood'),soil=surface('soil');
+ const tile=addPoolCaustics(surface('pool')),wood=surface('wood'),soil=surface('soil');
  const metal=new T.MeshStandardMaterial({color:0x555f5c,metalness:.8,roughness:.27});
  const steel=new T.MeshStandardMaterial({color:0xc6d0cb,metalness:.88,roughness:.19});
  const fabric=new T.MeshStandardMaterial({color:0xe7dfc9,roughness:.96});
@@ -22,11 +23,6 @@ export function buildOutdoorWellness(){
  // One terrace, two access links, and real cut-outs. No overlaid coplanar paving.
  const deck=solid(root,'Súvislá wellness terasa',wellnessOutline,wellnessBasins.map(b=>basinOutline(b,b.rim)),-.18,wellnessLevel,paving);
  const time={value:0},waters=[],bubbles=[];
- function waterMaterial(spa){
-  const m=new T.MeshPhysicalMaterial({color:spa?0x67b5b5:0x3695aa,transparent:true,opacity:spa?.60:.48,depthWrite:false,roughness:spa?.16:.075,metalness:.08,clearcoat:1,clearcoatRoughness:.12,envMapIntensity:1.3,side:T.DoubleSide});
-  m.onBeforeCompile=shader=>{shader.uniforms.wellnessTime=time;shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vWellnessSurface;').replace('#include <begin_vertex>','#include <begin_vertex>\nvWellnessSurface=position.xy;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform float wellnessTime;varying vec2 vWellnessSurface;').replace('#include <normal_fragment_maps>','#include <normal_fragment_maps>\nnormal=normalize(normal+vec3(sin(vWellnessSurface.x*7.0+vWellnessSurface.y*4.0+wellnessTime*1.1)*.06,cos(vWellnessSurface.y*9.0-wellnessTime*.8)*.045,0.0));')};
-  m.customProgramCacheKey=()=> 'rokyta-outdoor-water-1';return m;
- }
  function tube(g,points,r=.026){const curve=new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p)));const mesh=new T.Mesh(new T.TubeGeometry(curve,32,r,8,false),steel);mesh.castShadow=true;g.add(mesh)}
  const lit=new T.MeshStandardMaterial({color:0xfff3cc,emissive:0xffdea0,emissiveIntensity:.45,roughness:.3});
  for(const b of wellnessBasins){
@@ -35,7 +31,7 @@ export function buildOutdoorWellness(){
   solid(group,'Steny · '+b.name,basinOutline(b,.18),[basinOutline(b)],b.bottom,wellnessLevel-.10,tile);
   solid(group,'Lem · '+b.name,basinOutline(b,b.rim),[basinOutline(b)],wellnessLevel-.10,wellnessLevel,coping);
   const cx=b.radius?b.x:(b.x0+b.x1)/2,cz=b.radius?b.z:(b.z0+b.z1)/2;
-  const water=new T.Mesh(b.radius?new T.CircleGeometry(b.radius,64):new T.PlaneGeometry(b.x1-b.x0,b.z1-b.z0),waterMaterial(b.id==='spa'));water.rotation.x=-Math.PI/2;water.position.set(cx,b.water,cz);water.name='Voda · '+b.name;water.receiveShadow=true;group.add(water);waters.push(water);
+  const water=new T.Mesh(b.radius?new T.CircleGeometry(b.radius,64):new T.PlaneGeometry(b.x1-b.x0,b.z1-b.z0),makeWaterMaterial(b.id==='spa'));water.rotation.x=-Math.PI/2;water.position.set(cx,b.water,cz);water.name='Voda · '+b.name;water.receiveShadow=true;group.add(water);waters.push(water);
   if(b.id==='swimming'){
    // Broad submerged steps descend from the short end into the main basin.
    for(let i=0;i<6;i++){const top=-.20-i*.22;box(group,cx,(b.bottom+top)/2,b.z1-(i+.5)*.30,b.x1-b.x0,top-b.bottom,.30,tile)}

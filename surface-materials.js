@@ -3,6 +3,11 @@ import * as T from 'three';
 // Metre-based textures: the same paving joint or plaster grain keeps its size
 // on a small stair tread, a long balcony and the PDF-derived wall polygons.
 const cache=new Map();
+export const surfaceTime={value:0};
+export function updateSurfaceTime(time){surfaceTime.value=time}
+const rasterSurfaces={grass:['lawn-albedo.png',1.65],wood:['oak-albedo.png',1.4],plaster:['plaster-albedo.png',1.2]};
+const surfaceJobs=[];
+export function waitForSurfaceImages(){return Promise.allSettled(surfaceJobs)}
 const fract=x=>x-Math.floor(x);
 const hash=(x,y)=>fract(Math.sin(x*127.1+y*311.7)*43758.5453);
 function noise(x,y,period){
@@ -18,7 +23,7 @@ const specifications={
  asphalt:{color:[87,91,92],size:2,roughness:.95,bump:.012},
  courtBlue:{color:[58,121,127],size:2,roughness:.91,bump:.0015},
  courtRed:{color:[155,94,84],size:2,roughness:.9,bump:.0015},
- grass:{color:[101,119,68],size:5,roughness:1,bump:.045},
+ grass:{color:[101,119,68],size:1.65,roughness:1,bump:.014},
  soil:{color:[95,81,60],size:2,roughness:1,bump:.026},
  wood:{color:[153,115,77],size:1.2,roughness:.57,bump:.009},
  bark:{color:[99,85,65],size:.8,roughness:.95,bump:.025},
@@ -26,7 +31,7 @@ const specifications={
  pool:{color:[147,186,184],size:1.2,roughness:.36,bump:.005}
 };
 function buildTextures(kind){
- const spec=specifications[kind],size=512,albedo=new Uint8Array(size*size*4),bump=new Uint8Array(size*size*4);
+ const spec=specifications[kind],size=512,albedo=new Uint8Array(size*size*4),bump=new Uint8Array(size*size*4),rough=new Uint8Array(size*size*4);
  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
   const u=x/size,v=y/size,n=hash(x,y),broad=noise(u*8,v*8,8),medium=noise(u*32,v*32,32);
   let variation=(n-.5)*.045+(broad-.5)*.055,height=n*.25+.35;
@@ -48,29 +53,41 @@ function buildTextures(kind){
   }
   const i=(y*size+x)*4;
   for(let k=0;k<3;k++){albedo[i+k]=Math.max(0,Math.min(255,spec.color[k]*(1+variation)));bump[i+k]=Math.round(height*255)}
-  albedo[i+3]=bump[i+3]=255;
+  const variationRough=kind==='asphalt'?.74+n*.26:kind==='wood'?.78+height*.20:.86+height*.14;
+  for(let k=0;k<3;k++)rough[i+k]=Math.round(255*Math.min(1,variationRough));
+  albedo[i+3]=bump[i+3]=rough[i+3]=255;
  }
  const texture=(array,colorSpace)=>{const t=new T.DataTexture(array,size,size,T.RGBAFormat);t.wrapS=t.wrapT=T.RepeatWrapping;t.magFilter=T.LinearFilter;t.minFilter=T.LinearMipmapLinearFilter;t.generateMipmaps=true;t.repeat.set(1/spec.size,1/spec.size);t.colorSpace=colorSpace;t.needsUpdate=true;return t};
- return {map:texture(albedo,T.SRGBColorSpace),bumpMap:texture(bump,T.NoColorSpace)};
+ return {map:texture(albedo,T.SRGBColorSpace),bumpMap:texture(bump,T.NoColorSpace),roughnessMap:texture(rough,T.NoColorSpace)};
 }
 export function surface(kind){
  if(cache.has(kind))return cache.get(kind);
  const spec=specifications[kind];if(!spec)throw Error('Unknown surface '+kind);
- const m=new T.MeshStandardMaterial({...buildTextures(kind),roughness:spec.roughness,bumpScale:spec.bump});
+ const textures=buildTextures(kind);
+ if(rasterSurfaces[kind]){const [file,size]=rasterSurfaces[kind],fallback=textures.map;
+  let done;surfaceJobs.push(new Promise(resolve=>{done=resolve}));
+  const map=new T.TextureLoader().load('assets/materials/'+file,()=>{fallback.dispose();done()},undefined,()=>{map.image=fallback.image;map.isDataTexture=true;map.flipY=false;map.needsUpdate=true;done()});
+  map.wrapS=map.wrapT=T.RepeatWrapping;map.repeat.set(1/size,1/size);map.colorSpace=T.SRGBColorSpace;map.magFilter=T.LinearFilter;map.minFilter=T.LinearMipmapLinearFilter;map.generateMipmaps=true;textures.map=map;
+ }
+ const m=new T.MeshStandardMaterial({...textures,roughness:spec.roughness,bumpScale:spec.bump});
  m.name=kind;m.userData.metreUV=true;
  if(kind==='grass'){
   // Broad colour variation prevents a visibly tiled carpet at building scale.
   m.onBeforeCompile=shader=>{
    shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vGrassWorld;').replace('#include <begin_vertex>','#include <begin_vertex>\nvGrassWorld=(modelMatrix*vec4(position,1.0)).xyz;');
-   shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vGrassWorld;').replace('#include <color_fragment>','#include <color_fragment>\nfloat mottling=sin(vGrassWorld.x*.29+sin(vGrassWorld.z*.18))*sin(vGrassWorld.z*.37+cos(vGrassWorld.x*.21));\ndiffuseColor.rgb*=.94+.09*mottling;');
+   shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vGrassWorld;').replace('#include <map_fragment>',`#ifdef USE_MAP
+    vec2 uvA=vMapUv,uvB=mat2(.8,-.6,.6,.8)*vMapUv+vec2(.37,.71);
+    float blend=.5+.35*sin(vGrassWorld.x*.21+sin(vGrassWorld.z*.18));
+    diffuseColor*=mix(texture2D(map,uvA),texture2D(map,uvB),blend);
+   #endif`).replace('#include <color_fragment>','#include <color_fragment>\nfloat mottling=sin(vGrassWorld.x*.19+sin(vGrassWorld.z*.13))*sin(vGrassWorld.z*.23+cos(vGrassWorld.x*.16));\ndiffuseColor.rgb*=.95+.055*mottling+.018*cos(vGrassWorld.x*.68+vGrassWorld.z*.11);');
   };
-  m.customProgramCacheKey=()=> 'rokyta-grass-1';
+  m.customProgramCacheKey=()=> 'rokyta-grass-2';
  }
  cache.set(kind,m);return m;
 }
 export function glassMaterial(railing=false){
- const m=new T.MeshPhysicalMaterial({color:railing?0xdde9e7:0xb4cbd1,metalness:.1,roughness:.095,transparent:true,opacity:railing?.21:.39,depthWrite:false,side:T.DoubleSide,clearcoat:1,clearcoatRoughness:.065,envMapIntensity:1.2});
- m.name=railing?'Balcony glass':'Window glass';return m;
+ const m=new T.MeshPhysicalMaterial({color:railing?0xe9f2ee:0x99b4b5,metalness:.12,roughness:railing?.07:.065,transparent:true,opacity:railing?.17:.57,depthWrite:false,side:T.DoubleSide,clearcoat:1,clearcoatRoughness:.045,envMapIntensity:1.45});
+ m.name=railing?'Balcony glass':'Window glass';m.userData.reflectionSurface=true;return m;
 }
 export function finishSurfaces(root,renderer){
  const done=new WeakSet(),filtered=new WeakSet(),anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());root.traverse(mesh=>{
