@@ -5,6 +5,7 @@ import {createPlanting} from './planting.js';
 import {buildSportsLandscape} from './sports-landscape.js';
 import {buildSiteBoundary} from './site-boundary.js';
 import {buildParkingAndStorage} from './parking-storage.js';
+import {cellars,eastCellars} from './parking-layout.js';
 import {buildPhotovoltaics} from './photovoltaics.js';
 import {buildOutdoorWellness} from './outdoor-wellness.js';
 import {buildArchitectureFinish} from './architecture-finish.js';
@@ -79,10 +80,22 @@ export function buildExterior(){
  const groundGeo=new T.ShapeGeometry(groundShape);groundGeo.rotateX(-Math.PI/2);groundGeo.userData.uvProjection='xz';const groundMesh=new T.Mesh(groundGeo,lawn);groundMesh.position.y=-.06;groundMesh.receiveShadow=true;groundMesh.name='Ground outside the graded hill';root.add(groundMesh);
  const lowerPath=box(root,0,-.01,-7.8,74,.14,4.3,paving);lowerPath.name='Lower garden walkway';
  subtractTopSurfaces(lowerPath,[rectOutline({x0:-35.5,x1:-10.5,z0:-8.8,z1:-.8})]);
- for(const side of [-1,1]){const x=side<0?-23:25;box(root,x,1.24,side<0?12.505:10.5,19,2.48,side<0?21.99:26,earth);box(root,x,2.51,10.5,19,.08,26,lawn);box(root,x,1.22,side<0?1.51:-2.5,19,2.48,.23,white);box(root,x,2.525,12.8,19,.1,1.5,paving);box(root,x,2.51,22.4,19,.13,4,paving)}
- box(root,-23,.0,-4.8,25,.12,8,paving).name='Cellar courtyard';const cellarRoof=box(root,-23,2.35,-1.6,25,.22,6.2,white);box(root,-23,2.49,-1.6,25,.08,6.2,lawn);const cellarBack=box(root,-23,1.1,1.4,25,2.3,.22,white);for(let x=-35.5;x<=-10.5;x+=3.125)box(root,x,1.1,-4.7,.25,2.3,.25,white);
+ for(const side of [-1,1]){
+  const x=side<0?-23:25,soilFront=side<0?1.51:eastCellars.back;
+  // Excavate only the new cellar footprint; the garden continues behind and
+  // above the rooms, without a solid soil block sealing their doorways.
+  box(root,x,1.24,(soilFront+23.5)/2,19,2.48,23.5-soilFront,earth);
+  box(root,x,2.51,10.5,19,.08,26,lawn);
+  if(side<0)box(root,x,1.22,1.51,19,2.48,.23,white);
+  box(root,x,2.525,12.8,19,.1,1.5,paving);box(root,x,2.51,22.4,19,.13,4,paving);
+ }
+ box(root,-23,cellars.floor-.06,(cellars.approachFront+cellars.back)/2,25,.12,cellars.back-cellars.approachFront,paving).name='Cellar courtyard';const cellarRoof=box(root,-23,2.35,-1.6,25,.22,6.2,white);box(root,-23,2.49,-1.6,25,.08,6.2,lawn);const cellarBack=box(root,-23,1.1,1.4,25,2.3,.22,white);for(let x=-35.5;x<=-10.5;x+=3.125)box(root,x,1.1,-4.7,.25,2.3,.25,white);
+ const ec=eastCellars,ecX=(ec.x0+ec.x1)/2,ecZ=(ec.front+ec.back)/2;
+ box(root,ecX,ec.floor-.06,(ec.approachFront+ec.back)/2,ec.x1-ec.x0,.12,ec.back-ec.approachFront,paving).name='Chodník a podlaha nových kobiek';
+ const eastCellarRoof=box(root,ecX,(ec.ceiling+2.48)/2,ecZ,ec.x1-ec.x0,2.48-ec.ceiling,ec.back-ec.front,white);eastCellarRoof.name='Strop pod druhou záhradou';
+ const eastCellarBack=box(root,ecX,(ec.floor+ec.ceiling)/2,ec.back,ec.x1-ec.x0,ec.ceiling-ec.floor,.22,white);eastCellarBack.name='Zadná stena nových kobiek';
  root.add(buildParkedCars());
- const parkingStorage=buildParkingAndStorage();parkingStorage.userData.occluders.push(cellarRoof,cellarBack);root.add(parkingStorage);
+ const parkingStorage=buildParkingAndStorage();parkingStorage.userData.occluders.push(cellarRoof,cellarBack,eastCellarRoof,eastCellarBack);root.add(parkingStorage);
  // Flush drainage grating at the garage threshold; no new obstacle on the ramp.
  box(root,garage.x1+.22,garage.floor+.002,gz,.24,.006,5.48,frame);
  for(let z=garage.doorZ0+.07;z<garage.doorZ1;z+=.09)box(root,garage.x1+.22,garage.floor+.008,z,.23,.008,.023,coping);

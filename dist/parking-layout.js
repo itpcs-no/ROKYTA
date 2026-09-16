@@ -6,14 +6,17 @@ export const hillsideParking={front:33,back:40.5,clearance:2.6,roof:.28,soil:.22
 export const parkingBays=hillsideParking.blocks.flatMap((b,block)=>Array.from({length:b.count},(_,i)=>({
  id:hillsideParking.blocks.slice(0,block).reduce((sum,row)=>sum+row.count,0)+i+1,x:b.x0+(i+.5)*(b.x1-b.x0)/b.count,z:37,width:(b.x1-b.x0)/b.count
 })));
-export const cellars={x0:-35.5,x1:-10.5,front:-4.7,back:1.4,floor:.06,ceiling:2.24,count:8,pitch:3.125,doorWidth:.96,doorHeight:2.02};
-export const cellarDoors=Array.from({length:cellars.count},(_,i)=>({x:cellars.x0+(i+.5)*cellars.pitch-cellars.doorWidth/2,z:cellars.front,width:cellars.doorWidth,id:i+1}));
+export const cellars={x0:-35.5,x1:-10.5,front:-4.7,back:1.4,approachFront:-8.8,floor:.06,ceiling:2.24,roofLevel:2.53,count:8,pitch:3.125,doorWidth:.96,doorHeight:2.02,firstNumber:1};
+// The marked blank retaining wall is under the opposite (eastern) garden.
+export const eastCellars={...cellars,x0:15.5,x1:34.5,front:-2.5,back:3.6,approachFront:-5.65,roofLevel:2.55,count:6,pitch:19/6,firstNumber:9};
+export const cellarRows=[cellars,eastCellars];
+export const cellarDoors=cellarRows.flatMap((c,row)=>Array.from({length:c.count},(_,i)=>({row,x:c.x0+(i+.5)*c.pitch-c.doorWidth/2,z:c.front,width:c.doorWidth,id:c.firstNumber+i})));
 const smooth=x=>{const t=Math.max(0,Math.min(1,x));return t*t*(3-2*t)};
 export const parkingCapacity=parkingBays.length+curvedParkingBays.length;
 export function parkingBlockAt(x,z){return (z>=hillsideParking.front&&z<=hillsideParking.back?hillsideParking.blocks.find(b=>x>=b.x0&&x<=b.x1):undefined)||(curvedAt(x,z)?curvedParking:undefined)}
 export function parkingFloorHeight(x,z,base){const hit=curvedAt(x,z);return hit?curvedFloor(hit.s,base):base}
 export function parkingCeilingHeight(x,z,base){return parkingFloorHeight(x,z,base)+hillsideParking.clearance}
-export function cellarAt(x,z){return x>=cellars.x0&&x<=cellars.x1&&z>=cellars.front&&z<=cellars.back}
+export function cellarAt(x,z){return cellarRows.find(c=>x>=c.x0&&x<=c.x1&&z>=c.front&&z<=c.back)}
 export function parkingRoofLevel(base){const p=hillsideParking;return base+p.clearance+p.roof+p.soil}
 export function raisedParkingTerrain(x,z,base,original){
  const p=hillsideParking;if(z<p.front||z>p.back+4)return original;
@@ -43,10 +46,13 @@ export function parkingBarrierAt(x,z,footHeight,base){
  return false;
 }
 export function cellarBarrierAt(x,z,footHeight,open){
- const c=cellars;if(footHeight>c.ceiling+.05)return false;
- if(near(x,z,c.x0,c.back,c.x1,c.back,.3))return true;
- for(let i=0;i<=c.count;i++)if(near(x,z,c.x0+i*c.pitch,c.front,c.x0+i*c.pitch,c.back,.23))return true;
- if(Math.abs(z-c.front)<.23&&x>=c.x0-.18&&x<=c.x1+.18&&!cellarDoors.some(d=>x>d.x+.18&&x<d.x+d.width-.18))return true;
- for(const d of cellarDoors)if(near(x,z,d.x,d.z,d.x+(open?0:d.width),d.z+(open?d.width:0),.16))return true;
+ for(const [row,c] of cellarRows.entries()){
+  if(footHeight>c.ceiling+.05)continue;
+  const doors=cellarDoors.filter(d=>d.row===row);
+  if(near(x,z,c.x0,c.back,c.x1,c.back,.3))return true;
+  for(let i=0;i<=c.count;i++)if(near(x,z,c.x0+i*c.pitch,c.front,c.x0+i*c.pitch,c.back,.23))return true;
+  if(Math.abs(z-c.front)<.23&&x>=c.x0-.18&&x<=c.x1+.18&&!doors.some(d=>x>d.x+.18&&x<d.x+d.width-.18))return true;
+  for(const d of doors)if(near(x,z,d.x,d.z,d.x+(open?0:d.width),d.z+(open?d.width:0),.16))return true;
+ }
  return false;
 }

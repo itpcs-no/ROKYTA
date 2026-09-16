@@ -9,7 +9,7 @@ import {subtractTopSurfaces,rectOutline} from './surface-geometry.js';
 import {courtSite,courtBarrierAt} from './court-layout.js';
 import {homeAt,homeBarrierAt,homesLevel} from './homes-layout.js';
 import {siteBarrierAt,serviceHouse,serviceShed,pavilion,pavilionCeiling} from './site-layout.js';
-import {hillsideParking,parkingBays,parkingBlockAt,parkingCeilingHeight,cellarAt,cellars,cellarDoors,parkingBarrierAt,cellarBarrierAt} from './parking-layout.js';
+import {hillsideParking,parkingBays,parkingBlockAt,parkingCeilingHeight,cellarAt,cellars,eastCellars,cellarRows,cellarDoors,parkingBarrierAt,cellarBarrierAt} from './parking-layout.js';
 import {curvedParking,curvedAt} from './curved-parking-layout.js';
 import * as T from 'three';
 import {createWalker} from './avatar.js';
@@ -121,6 +121,7 @@ function useCar(){
 $('carsView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(parkingBays[0].x,33.8,true);yaw=Math.PI;pitch=-.25};
 $('parkingView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();const a=curvedParking.cx-curvedParking.frontRadius-curvedParking.depth,b=hillsideParking.blocks.at(-1).x1,wide=innerWidth>760,center=(a+b)/2+(wide?10:0),distance=Math.max(63,((b-a)/2+(wide?16:6))/(Math.tan(camera.fov*Math.PI/360)*camera.aspect));controls.maxDistance=Math.max(150,distance*1.25);camera.position.set(center,3.7+distance*.43,36-distance);controls.target.set(center,3.7,31);controls.update();$('panel').classList.remove('open')};
 $('cellarsView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(cellarDoors[0].x+cellars.doorWidth/2,cellars.front-1.4,true);yaw=Math.PI;pitch=-.25};
+$('eastCellarsView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(eastCellars.x0+eastCellars.pitch/2,eastCellars.front-1.4,true);yaw=Math.PI;pitch=-.25;$('panel').classList.remove('open')};
 $('enterCar').onclick=useCar;
 const mapped={ArrowUp:'w',ArrowDown:'s',ArrowLeft:'a',ArrowRight:'d'};window.addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;const k=mapped[e.key]||e.key.toLowerCase();if(mode==='walk'&&e.code==='Space'){e.preventDefault();if(!e.repeat&&!driving.active&&jumpOffset===0)jumpVelocity=mounted?3.6:4.2}if(mode==='walk'&&k==='e'&&!e.repeat){e.preventDefault();useCar()}keys[k]=true;if(mode==='walk'&&['w','a','s','d'].includes(k))e.preventDefault();if(e.key==='Escape')orbitHome()});window.addEventListener('keyup',e=>{keys[mapped[e.key]||e.key.toLowerCase()]=false});window.addEventListener('blur',()=>{keys={};drag=null});document.querySelectorAll('[data-move]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);keys[b.dataset.move]=true};b.onpointerup=b.onpointercancel=()=>keys[b.dataset.move]=false});
 function inside(x,z,p){let c=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const a=p[i],b=p[j];if((a[1]>z)!==(b[1]>z)&&x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])c=!c}return c}
@@ -147,7 +148,7 @@ function coveredCeiling(x=nav.x,z=nav.z,foot=nav.y-1.65){
  const shelter=pavilionCeiling(x,z);if(shelter!==null)return shelter;
  const wellness=wellnessCeiling(x,z);if(wellness!==null)return wellness;
  if(parkingBlockAt(x,z)&&foot<parkingCeilingHeight(x,z,ramp.bottom)+.1)return parkingCeilingHeight(x,z,ramp.bottom);
- if(cellarAt(x,z)&&foot<cellars.ceiling+.05)return cellars.ceiling;
+ const cellar=cellarAt(x,z);if(cellar&&foot<cellar.ceiling+.05)return cellar.ceiling;
  if(homeAt(x,z))return homesLevel+2.98;
  return null;
 }
@@ -182,7 +183,7 @@ function keepCoveredCamera(eyeY){
  if(selected!=='all')return;
  const ceiling=coveredCeiling(),foot=nav.y-1.65;
  const nearParking=foot<parkingCeilingHeight(nav.x,nav.z,ramp.bottom)+.1&&((nav.z>hillsideParking.front-8&&nav.z<hillsideParking.back+1&&hillsideParking.blocks.some(b=>nav.x>b.x0-4&&nav.x<b.x1+4))||curvedAt(nav.x,nav.z,5));
- const nearCellars=foot<cellars.ceiling+.05&&nav.x>cellars.x0-3&&nav.x<cellars.x1+3&&nav.z>cellars.front-6&&nav.z<cellars.back+1;
+ const nearCellars=cellarRows.some(c=>foot<c.ceiling+.05&&nav.x>c.x0-3&&nav.x<c.x1+3&&nav.z>c.front-6&&nav.z<c.back+1);
  const nearHome=homeAt(nav.x,nav.z,4);
  const nearWellness=wellnessCeiling(nav.x,nav.z)!==null;
  const nearPavilion=nav.x>serviceShed.x0-2&&nav.x<serviceShed.x1+3&&nav.z>serviceShed.z0-2&&nav.z<serviceShed.z1+2;

@@ -1,7 +1,7 @@
 // Coordinates traced from 01_1NP and 02_2NP NAVRHOVANY, scale 1:100.
 import {courtWalkingHeight} from './court-layout.js';
 import {sitePavedHeight,siteShoulderHeight} from './site-layout.js';
-import {hillsideParking,parkingBlockAt,parkingFloorHeight,parkingCeilingHeight,cellarAt,cellars} from './parking-layout.js';
+import {hillsideParking,parkingBlockAt,parkingFloorHeight,parkingCeilingHeight,cellarAt,cellarRows} from './parking-layout.js';
 import {homeWalkingHeight} from './homes-layout.js';
 import {wellnessWalkingHeight} from './wellness-layout.js';
 export const garage={x0:-13.091288,x1:-2.341267,z0:15.503966,z1:23.828992,floor:2.78,doorZ0:17.403992,doorZ1:22.903974,doorHeight:3};
@@ -38,7 +38,7 @@ export function exteriorHeight(x,z,referenceHeight){
  if(z>=ramp.z0&&z<=ramp.z1&&x>=garage.x1&&x<=ramp.x1)y=rampHeight(x);
  if(z>=garage.z0&&z<=garage.z1&&x>=garage.x0&&x<garage.x1)y=garage.floor;
  if(x>=access.x0&&x<=access.x1&&z>=access.z0&&z<=access.z1)y=access.level;
- if(x>=-35.5&&x<=-10.5&&z>=-8.8&&z<=1.28)y=.06;
+ for(const c of cellarRows)if(x>=c.x0&&x<=c.x1&&z>=c.approachFront&&z<=c.front)y=c.floor;
  const sportsHeight=courtWalkingHeight(x,z,ramp.bottom);if(sportsHeight!==null)y=sportsHeight;
  const road=sitePavedHeight(x,z,ramp.bottom);if(road!==null)y=road;
  // Stairs sit above the lower walkway: its broad footprint must not reset
@@ -47,7 +47,7 @@ export function exteriorHeight(x,z,referenceHeight){
  if(gardenPaths.some(p=>x>=p.x0&&x<=p.x1&&z>=p.z0&&z<=p.z1))y=gardenStairs.top;
  // Distinguish the ground floor from the grass roof at the same x/z position.
  if(parkingBlockAt(x,z)&&(referenceHeight===undefined||referenceHeight<parkingCeilingHeight(x,z,ramp.bottom)+.1))y=parkingFloorHeight(x,z,ramp.bottom);
- if(cellarAt(x,z))y=referenceHeight!==undefined&&referenceHeight>cellars.ceiling+.05?2.53:cellars.floor;
+ const cellar=cellarAt(x,z);if(cellar)y=referenceHeight!==undefined&&referenceHeight>cellar.ceiling+.05?cellar.roofLevel:cellar.floor;
  const housing=homeWalkingHeight(x,z,ramp.bottom);if(housing!==null)y=housing;
  const wellness=wellnessWalkingHeight(x,z);if(wellness!==null)y=wellness;
  return y;
