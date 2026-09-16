@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {parkingBays} from './parking-layout.js';
 import {ramp} from './project-geometry.js';
+import {curvedParkingBays,curvedFloor} from './curved-parking-layout.js';
 // One drivable car in every recessed parking bay.
 export function buildParkedCars(){
  const cars=new T.Group();cars.name='Cars in covered parking';cars.userData.location='Under the courts';
@@ -9,8 +10,9 @@ export function buildParkedCars(){
  function box(g,x,y,z,w,h,d,m){const o=new T.Mesh(m.isMeshPhysicalMaterial?rounded(w,h,d):new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;g.add(o);return o}
  function quad(g,pts,m){const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(pts.flat(),3));geo.setIndex([0,1,2,0,2,3]);geo.computeVertexNormals();const o=new T.Mesh(geo,m);o.castShadow=true;o.receiveShadow=true;g.add(o)}
  const paints=[0xe7e8e5,0x555b60,0x272c31,0xd0d1ca,0x344853,0xf0f0e9,0x62696c,0x6f3530];
- for(let i=0;i<parkingBays.length;i++){
-  const bay=parkingBays[i],car=new T.Group();car.name=`Parked car ${i+1}`;car.position.set(bay.x,ramp.bottom,bay.z);cars.add(car);
+ const occupied=[...parkingBays,...curvedParkingBays.filter(b=>b.arc&&b.id%2===1)];
+ for(let i=0;i<occupied.length;i++){
+  const bay=occupied[i],car=new T.Group();car.name=`Parked car ${bay.id}`;car.position.set(bay.x,bay.s===undefined?ramp.bottom:curvedFloor(bay.s,ramp.bottom),bay.z);car.rotation.y=bay.angle??0;cars.add(car);
   const paint=new T.MeshPhysicalMaterial({color:paints[i%paints.length],metalness:.52,roughness:.19,clearcoat:1,clearcoatRoughness:.08,envMapIntensity:1.2,side:T.DoubleSide});
   box(car,0,.56,0,1.78,.35,4.28,trim);box(car,0,.78,0,1.84,.4,4.38,paint);
   box(car,0,1,-1.5,1.78,.1,1.22,paint);box(car,0,.99,1.68,1.76,.1,.87,paint);
@@ -32,7 +34,7 @@ export function buildParkedCars(){
    box(car,side*.61,.85,-2.205,.48,.135,.032,headlight);box(car,side*.66,.86,2.205,.35,.16,.032,tail);
   }
   box(car,0,.62,-2.208,.79,.13,.025,trim);box(car,0,.63,2.211,.31,.085,.025,rim);
-  car.userData={bay:i+1,width:2.02,length:4.44,height:1.56};
+  car.userData={bay:bay.id,width:2.02,length:4.44,height:1.56};
  }
  return cars;
 }

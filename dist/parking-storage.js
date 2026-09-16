@@ -2,6 +2,9 @@ import * as T from 'three';
 import {surface} from './surface-materials.js';
 import {ramp} from './project-geometry.js';
 import {hillsideParking as parking,parkingBays,parkingRoofLevel,cellars,cellarDoors} from './parking-layout.js';
+import {buildCurvedParking} from './curved-parking.js';
+import {curvedOutline} from './curved-parking-layout.js';
+import {subtractTopSurfaces} from './surface-geometry.js';
 
 export function buildParkingAndStorage(){
  const root=new T.Group();root.name='Zapustené parkovanie a pivničné kobky';
@@ -22,8 +25,9 @@ export function buildParkingAndStorage(){
  const floor=ramp.bottom,ceiling=floor+parking.clearance,roof=parkingRoofLevel(floor);
  for(const block of parking.blocks){
   const center=(block.x0+block.x1)/2,depth=parking.back-parking.front,width=block.x1-block.x0;
-  box(parkingGroup,center,(floor-.12)/2,(parking.front+parking.back)/2,width+.26,floor+.12,depth+.26,concrete).name='Podlaha parkovania v úrovni cesty';
-  box(parkingGroup,center,ceiling+parking.roof/2,(parking.front+parking.back)/2,width+.28,parking.roof,depth+.28,concrete).name='Nosný strop pod svahom';
+  const slab=box(parkingGroup,center,(floor-.12)/2,(parking.front+parking.back)/2,width+.26,floor+.12,depth+.26,concrete);slab.name='Podlaha parkovania v úrovni cesty';
+  const roofSlab=box(parkingGroup,center,ceiling+parking.roof/2,(parking.front+parking.back)/2,width+.28,parking.roof,depth+.28,concrete);roofSlab.name='Nosný strop pod svahom';
+  if(block===parking.blocks[0]){subtractTopSurfaces(slab,[curvedOutline()],true);subtractTopSurfaces(roofSlab,[curvedOutline(depth+.1,-.1)],true)}
   for(const x of [block.x0,block.x1])box(parkingGroup,x,(floor+ceiling)/2,(parking.front+parking.back)/2,.26,parking.clearance,depth,concrete);
   box(parkingGroup,center,(floor+ceiling)/2,parking.back,width,parking.clearance,.26,concrete);
   box(parkingGroup,center,(ceiling+roof)/2,parking.front,width+.28,roof-ceiling,.3,white).name='Čelo stropu a zeleného zásypu';
@@ -41,6 +45,7 @@ export function buildParkingAndStorage(){
   box(parkingGroup,bay.x,floor+.075,39.7,1.8,.15,.22,concrete);
   box(parkingGroup,bay.x,ceiling-.045,36.5,1.35,.08,.16,lamp,false);
  }
+ const curved=buildCurvedParking(floor,number);parkingGroup.add(curved);occluders.push(...curved.userData.occluders);
  // Existing grass roof and slab are retained, eight openings become lockable rooms.
  const c=cellars,h=c.ceiling-c.floor;
  for(let i=0;i<=c.count;i++)box(storage,c.x0+i*c.pitch,(c.ceiling+c.floor)/2,(c.front+c.back)/2,.14,h,c.back-c.front,white);
@@ -62,5 +67,5 @@ export function buildParkingAndStorage(){
   box(storage,center,c.ceiling-.045,-1.6,.75,.075,.13,lamp,false);
  }
  const setDoors=open=>{doors.forEach(p=>p.rotation.y=open?-Math.PI/2:0);root.updateMatrixWorld(true)};
- setDoors(true);root.userData={parkingGroup,storage,occluders,doors,setDoors};return root;
+ setDoors(true);root.userData={parkingGroup,storage,curved,occluders,doors,setDoors};return root;
 }

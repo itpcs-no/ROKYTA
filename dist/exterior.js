@@ -9,7 +9,7 @@ import {buildPhotovoltaics} from './photovoltaics.js';
 import {buildOutdoorWellness} from './outdoor-wellness.js';
 import {buildArchitectureFinish} from './architecture-finish.js';
 import {wellnessOutline,wellnessBeds} from './wellness-layout.js';
-import {courtSite,courtTerrainHeight} from './court-layout.js';
+import {courtSite,courtTerrainBounds,courtTerrainHeight} from './court-layout.js';
 import {subtractTopSurfaces,rectOutline} from './surface-geometry.js';
 import {garage,ramp,levels,footprints,gardenStairs,gardenPaths,access} from './project-geometry.js';
 // Visual reconstruction of the 1 August 2018 references, fitted to the PDF footprint.
@@ -75,7 +75,7 @@ export function buildExterior(){
  const groundShape=new T.Shape();groundShape.moveTo(-700,700);groundShape.lineTo(700,700);groundShape.lineTo(700,-700);groundShape.lineTo(-700,-700);groundShape.closePath();
  // The graded hill replaces this part of the ground, including its outer edge.
  // Keeping the original plane below it produced coplanar grass triangles.
- for(const points of [rectOutline(courtSite),wellnessOutline,...wellnessBeds.map(rectOutline)]){const hole=new T.Path();points.forEach(([x,z],i)=>i?hole.lineTo(x,-z):hole.moveTo(x,-z));hole.closePath();groundShape.holes.push(hole)}
+ for(const points of [rectOutline(courtTerrainBounds),wellnessOutline,...wellnessBeds.map(rectOutline)]){const hole=new T.Path();points.forEach(([x,z],i)=>i?hole.lineTo(x,-z):hole.moveTo(x,-z));hole.closePath();groundShape.holes.push(hole)}
  const groundGeo=new T.ShapeGeometry(groundShape);groundGeo.rotateX(-Math.PI/2);groundGeo.userData.uvProjection='xz';const groundMesh=new T.Mesh(groundGeo,lawn);groundMesh.position.y=-.06;groundMesh.receiveShadow=true;groundMesh.name='Ground outside the graded hill';root.add(groundMesh);
  const lowerPath=box(root,0,-.01,-7.8,74,.14,4.3,paving);lowerPath.name='Lower garden walkway';
  subtractTopSurfaces(lowerPath,[rectOutline({x0:-35.5,x1:-10.5,z0:-8.8,z1:-.8})]);

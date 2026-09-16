@@ -1,5 +1,6 @@
 // User-requested concept: recessed parking across the entire court frontage.
 // These new parking/storage volumes are not part of the supplied PDF proposal.
+import {curvedAt,curvedFloor,curvedParking,curvedParkingBarrierAt,curvedParkingBays} from './curved-parking-layout.js';
 export const hillsideParking={front:33,back:40.5,clearance:2.6,roof:.28,soil:.22,post:.26,
  blocks:[{x0:-47.5,x1:-.3,count:14},{x0:2.3,x1:29,count:8}]};
 export const parkingBays=hillsideParking.blocks.flatMap((b,block)=>Array.from({length:b.count},(_,i)=>({
@@ -8,7 +9,10 @@ export const parkingBays=hillsideParking.blocks.flatMap((b,block)=>Array.from({l
 export const cellars={x0:-35.5,x1:-10.5,front:-4.7,back:1.4,floor:.06,ceiling:2.24,count:8,pitch:3.125,doorWidth:.96,doorHeight:2.02};
 export const cellarDoors=Array.from({length:cellars.count},(_,i)=>({x:cellars.x0+(i+.5)*cellars.pitch-cellars.doorWidth/2,z:cellars.front,width:cellars.doorWidth,id:i+1}));
 const smooth=x=>{const t=Math.max(0,Math.min(1,x));return t*t*(3-2*t)};
-export function parkingBlockAt(x,z){return z>=hillsideParking.front&&z<=hillsideParking.back?hillsideParking.blocks.find(b=>x>=b.x0&&x<=b.x1):undefined}
+export const parkingCapacity=parkingBays.length+curvedParkingBays.length;
+export function parkingBlockAt(x,z){return (z>=hillsideParking.front&&z<=hillsideParking.back?hillsideParking.blocks.find(b=>x>=b.x0&&x<=b.x1):undefined)||(curvedAt(x,z)?curvedParking:undefined)}
+export function parkingFloorHeight(x,z,base){const hit=curvedAt(x,z);return hit?curvedFloor(hit.s,base):base}
+export function parkingCeilingHeight(x,z,base){return parkingFloorHeight(x,z,base)+hillsideParking.clearance}
 export function cellarAt(x,z){return x>=cellars.x0&&x<=cellars.x1&&z>=cellars.front&&z<=cellars.back}
 export function parkingRoofLevel(base){const p=hillsideParking;return base+p.clearance+p.roof+p.soil}
 export function raisedParkingTerrain(x,z,base,original){
@@ -26,6 +30,7 @@ export const courtFrontWalls=[[-47.5,-.3],[2.3,29]].flatMap(([a,b])=>{
 });
 function near(x,z,ax,az,bx,bz,r){const dx=bx-ax,dz=bz-az,t=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz)));return Math.hypot(x-ax-t*dx,z-az-t*dz)<r}
 export function parkingBarrierAt(x,z,footHeight,base){
+ if(curvedParkingBarrierAt(x,z,footHeight,base))return true;
  const p=hillsideParking;
  for(const b of p.blocks){
   if(footHeight>base+p.clearance+.1){if(near(x,z,b.x0,p.front+.18,b.x1,p.front+.18,.22))return true;continue}

@@ -1,7 +1,7 @@
 // Coordinates traced from 01_1NP and 02_2NP NAVRHOVANY, scale 1:100.
 import {courtWalkingHeight} from './court-layout.js';
 import {sitePavedHeight,siteShoulderHeight} from './site-layout.js';
-import {hillsideParking,parkingBlockAt,cellarAt,cellars} from './parking-layout.js';
+import {hillsideParking,parkingBlockAt,parkingFloorHeight,parkingCeilingHeight,cellarAt,cellars} from './parking-layout.js';
 import {homeWalkingHeight} from './homes-layout.js';
 import {wellnessWalkingHeight} from './wellness-layout.js';
 export const garage={x0:-13.091288,x1:-2.341267,z0:15.503966,z1:23.828992,floor:2.78,doorZ0:17.403992,doorZ1:22.903974,doorHeight:3};
@@ -46,7 +46,7 @@ export function exteriorHeight(x,z,referenceHeight){
  if(z>=gardenStairs.z0&&z<gardenStairs.z1&&gardenStairs.flights.some(f=>x>=f.x0&&x<=f.x1))y=gardenStairHeight(z);
  if(gardenPaths.some(p=>x>=p.x0&&x<=p.x1&&z>=p.z0&&z<=p.z1))y=gardenStairs.top;
  // Distinguish the ground floor from the grass roof at the same x/z position.
- if(parkingBlockAt(x,z)&&(referenceHeight===undefined||referenceHeight<ramp.bottom+hillsideParking.clearance+.1))y=ramp.bottom;
+ if(parkingBlockAt(x,z)&&(referenceHeight===undefined||referenceHeight<parkingCeilingHeight(x,z,ramp.bottom)+.1))y=parkingFloorHeight(x,z,ramp.bottom);
  if(cellarAt(x,z))y=referenceHeight!==undefined&&referenceHeight>cellars.ceiling+.05?2.53:cellars.floor;
  const housing=homeWalkingHeight(x,z,ramp.bottom);if(housing!==null)y=housing;
  const wellness=wellnessWalkingHeight(x,z);if(wellness!==null)y=wellness;
