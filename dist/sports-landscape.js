@@ -3,7 +3,7 @@ import {surface} from './surface-materials.js';
 import {ramp} from './project-geometry.js';
 import {courtSite,courtTerrainBounds,courtTerrainHeight,courtStairHeight} from './court-layout.js';
 import {curvedParking,curvedOutline} from './curved-parking-layout.js';
-import {subtractTopSurfaces} from './surface-geometry.js';
+import {subtractTopSurfaces,rectOutline} from './surface-geometry.js';
 import {hillsideHomes,inRect} from './homes-layout.js';
 import {buildHillsideHomes} from './hillside-homes.js';
 import {hillsideParking,parkingBlockAt,courtFrontWalls} from './parking-layout.js';
@@ -28,9 +28,13 @@ export function buildSportsLandscape(){
  for(let j=0;j<zs.length-1;j++)for(let i=0;i<xs.length-1;i++){if(hillsideHomes.some(h=>inRect((xs[i]+xs[i+1])/2,(zs[j]+zs[j+1])/2,h.pool)))continue;const a=j*xs.length+i,b=a+1,c=a+xs.length,d=c+1;indices.push(a,c,b,b,c,d)}
  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(points,3));geo.setIndex(indices);geo.computeVertexNormals();geo.userData.uvProjection='xz';
  const hill=new T.Mesh(geo,grass);hill.name='Continuous graded hill';hill.receiveShadow=true;hill.castShadow=true;root.add(hill);
- // The exact curved roof replaces the grid above the bays. Cut the adjacent
- // road too, including steep triangles, so no turf intrudes into the openings.
- subtractTopSurfaces(hill,[curvedOutline(curvedParking.depth,-5)],false,0);
+ // Extending the height-field south creates sloped faces between the road
+ // and the original grass roof. Remove those faces across both original rows
+ // so all 22 entrances stay open; retain their roof surface from z=33 onward.
+ const originalApproaches=hillsideParking.blocks.map(b=>rectOutline({x0:b.x0,x1:b.x1,z0:hillsideParking.front-5,z1:hillsideParking.front}));
+ // The exact curved roof replaces the grid above the added bays. Include its
+ // approach and every upward face, even steep ones, in the same terrain cut.
+ subtractTopSurfaces(hill,[...originalApproaches,curvedOutline(curvedParking.depth,-5)],false,0);
  // The mound's front meets the existing road without taking over its surface.
  const skirt=[];for(let i=0;i<xs.length-1;i++){const x=xs[i],xx=xs[i+1];if(parkingBlockAt((x+xx)/2,s.z0))continue;const a=courtTerrainHeight(x,s.z0,base),b=courtTerrainHeight(xx,s.z0,base);skirt.push(x,-.06,s.z0,xx,b,s.z0,x,a,s.z0,x,-.06,s.z0,xx,-.06,s.z0,xx,b,s.z0)}
  const sg=new T.BufferGeometry();sg.setAttribute('position',new T.Float32BufferAttribute(skirt,3));sg.computeVertexNormals();const soil=new T.Mesh(sg,surface('soil'));root.add(soil);
