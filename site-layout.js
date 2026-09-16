@@ -5,6 +5,24 @@
 export const entrance={x:44,z:30.5,width:6,slide:6.7};
 export const serviceHouse={x0:-57.7,x1:-51.3,z0:-10.25,z1:4.45,base:.06,eaves:3.1,rise:.75};
 export const serviceShed={x0:-60.7,x1:-56.7,z0:-32.85,z1:-23.05,base:.06};
+// Social pavilion replaces the open shed; furniture coordinates are local to
+// its rear corner and shared by the visible model and movement barriers.
+export const pavilion={ceiling:2.7,screenDepth:2.1,
+ counter:{x0:.16,x1:1.08,z0:.45,z1:4.65},bar:{x0:2.6,x1:3.38,z0:.8,z1:4.6},
+ table:{x0:1.9,x1:3.05,z0:6.2,z1:8.9},
+ benches:[{x0:1.04,x1:1.52,z0:6.15,z1:8.95},{x0:3.48,x1:3.96,z0:6.15,z1:8.95}],
+ posts:[{x:4.15,z:0},{x:4.15,z:4.9},{x:4.15,z:9.8}],
+ stools:[1.25,2.2,3.15,4.1].map(z=>({x:4.08,z})),
+ planters:[{x0:4.3,x1:5.05,z0:-.35,z1:.55},{x0:4.3,x1:5.05,z0:9.25,z1:10.15}],
+ entry:{x:-55.1,z:-27.4},target:{x:-58.25,y:1.35,z:-27.9}
+};
+export function pavilionCeiling(x,z){const s=serviceShed;return x>=s.x0-.28&&x<=s.x1+.65&&z>=s.z0-.28&&z<=s.z1+.28?s.base+pavilion.ceiling:null}
+export function pavilionBarrierAt(x,z){
+ const s=serviceShed,p=pavilion,u=x-s.x0,v=z-s.z0;
+ if(near(u,v,[0,0],[0,9.8],.28)||near(u,v,[0,0],[p.screenDepth,0],.23)||near(u,v,[0,9.8],[p.screenDepth,9.8],.23))return true;
+ if(p.posts.some(a=>Math.hypot(u-a.x,v-a.z)<.29)||p.stools.some(a=>Math.hypot(u-a.x,v-a.z)<.42))return true;
+ return [p.counter,p.bar,p.table,...p.benches,...p.planters].some(r=>u>r.x0-.18&&u<r.x1+.18&&v>r.z0-.18&&v<r.z1+.18);
+}
 export const servicePaving=[[-58.5,5.05],[-45.6,5.05],[-45.6,-11.05],[-46.9,-11.05],[-46.9,-33.65],[-61.5,-33.65],[-61.5,-22.25],[-55.8,-22.25],[-55.8,-11.05],[-58.5,-11.05]];
 // Fill the garden-side verge flush with the straight road; blend only its
 // outer ends into the surrounding terrain, not down into a ditch by the road.
@@ -72,9 +90,7 @@ export function siteBarrierAt(x,z,open){
  if(Math.abs(x-entrance.x)<.48&&(Math.abs(z-27.2)<.52||Math.abs(z-33.8)<.52))return true;
  const cz=entrance.z-(open?entrance.slide:0);
  if(Math.abs(x-(entrance.x-.29))<.24&&Math.abs(z-cz)<entrance.width/2+.18)return true;
- const h=serviceHouse,s=serviceShed;
+ const h=serviceHouse;
  if(x>h.x0-.18&&x<h.x1+.18&&z>h.z0-.18&&z<h.z1+.18)return true;
- if(near(x,z,[s.x0,s.z0],[s.x1,s.z0],.3)||near(x,z,[s.x0,s.z0],[s.x0,s.z1],.3)||near(x,z,[s.x0,s.z1],[s.x1,s.z1],.3))return true;
- for(let i=0;i<=3;i++)if(Math.hypot(x-s.x1,z-s.z0-(s.z1-s.z0)*i/3)<.3)return true;
- return false;
+ return pavilionBarrierAt(x,z);
 }

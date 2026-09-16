@@ -3,7 +3,7 @@ import {surface} from './surface-materials.js';
 import {createPlanting} from './planting.js';
 import {levels,ramp} from './project-geometry.js';
 import {courtTerrainHeight} from './court-layout.js';
-import {serviceHouse,serviceShed} from './site-layout.js';
+import {serviceHouse} from './site-layout.js';
 import {wellnessBeds} from './wellness-layout.js';
 
 export const balconyPlanters=[0,1].flatMap(f=>[-22,-12,12,22].map(x=>({x,z:-24.35,y:levels[f],width:1.8,depth:.38})));
@@ -27,13 +27,12 @@ export function buildArchitectureFinish(){
  }
  // Sheet-metal seams already belong to the service roof; add gutters, fascia
  // joints and a modest entry canopy without changing either footprint.
- const h=serviceHouse,s=serviceShed,doorZ=h.z0+(h.z1-h.z0)*.55;
+ const h=serviceHouse,doorZ=h.z0+(h.z1-h.z0)*.55;
  box(h.x1+.55,h.base+2.94,doorZ,1.1,.12,1.9,charcoal);
  box(h.x1+.55,h.base+2.87,doorZ,1.08,.02,1.87,wood);
  for(const z of [doorZ-.65,doorZ+.65])tube([[h.x1+.08,h.base+2.8,z],[h.x1+.82,h.base+2.92,z]],.023);
  for(const x of [h.x0-.27,h.x1+.27])tube([[x,h.base+h.eaves-.04,h.z0-.3],[x,h.base+h.eaves-.04,h.z1+.3]],.065);
  tube([[h.x0-.3,.1,h.z1],[h.x0-.3,h.base+h.eaves-.1,h.z1]],.048);
- box((s.x0+s.x1)/2,s.base+2.80,s.z0-.25,s.x1-s.x0+.55,.14,.09,charcoal);
  // Small flowering perennials sit inside the existing recessed wellness beds.
  const flowerGeo=new T.IcosahedronGeometry(1,1),flowerMat=new T.MeshStandardMaterial({color:0x9b7fad,roughness:.94});
  const flowerMatrices=[],dummy=new T.Object3D();
