@@ -1,9 +1,9 @@
 import * as T from 'three';
 import {surface,glassMaterial} from './surface-materials.js';
 import {createPlanting} from './planting.js';
-import {ramp,exteriorHeight} from './project-geometry.js';
+import {ramp,access,exteriorHeight} from './project-geometry.js';
 import {courtTerrainHeight} from './court-layout.js';
-import {entrance,serviceHouse,serviceShed,servicePaving,siteRoads,siteShoulderHeight,boundarySegments} from './site-layout.js';
+import {entrance,serviceHouse,serviceShed,servicePaving,siteRoads,siteShoulderHeight,roadsideGarden,boundarySegments} from './site-layout.js';
 import {homeRoads} from './homes-layout.js';
 import {wellnessOutline,wellnessBeds} from './wellness-layout.js';
 import {subtractTopSurfaces,roadOutline,roadEdges,rectOutline} from './surface-geometry.js';
@@ -36,14 +36,18 @@ export function buildSiteBoundary(){
  subtractTopSurfaces(solidPolygon(cellarLink,.06,paving,'Napojenie kobiek na obvodovú cestu'),[servicePaving]);
  solidPolygon([[-37,-49],[-35,-49],[-35,-43.5],[-37,-43.5]],.06,paving,'Peší výstup z areálu');
  // Graded grass shoulders: no suspended asphalt sheets or exposed open undersides.
- const tp=[],ti=[],grid=new Map(),nx=Math.ceil(125/.6),nz=Math.ceil(137/.6);
- const vertex=(i,j)=>{const key=i*(nz+1)+j;if(grid.has(key))return grid.get(key);const x=-66+i*.6,z=-66+j*.6,y=siteShoulderHeight(x,z,ramp.bottom);const index=y===null?null:tp.length/3;if(index!==null)tp.push(x,y,z);grid.set(key,index);return index};
- for(let i=0;i<nx;i++)for(let j=0;j<nz;j++){
+ const g=roadsideGarden,tp=[],ti=[],grid=new Map();
+ const xs=[...new Set([...Array.from({length:Math.ceil(125/.6)+1},(_,i)=>-66+i*.6),g.x0-g.blend,g.x0,g.x1,g.x1+g.blend])].sort((a,b)=>a-b);
+ const zs=[...new Set([...Array.from({length:Math.ceil(137/.6)+1},(_,i)=>-66+i*.6),g.z0-g.blend,g.z0,g.z1])].sort((a,b)=>a-b);
+ // Include the exact road edge in the grid so the fill ends at the asphalt,
+ // rather than leaving the previous partial-cell gap along the whole verge.
+ const vertex=(i,j)=>{const key=i*zs.length+j;if(grid.has(key))return grid.get(key);const x=xs[i],z=zs[j],y=siteShoulderHeight(x,z,ramp.bottom);const index=y===null?null:tp.length/3;if(index!==null)tp.push(x,y,z);grid.set(key,index);return index};
+ for(let i=0;i<xs.length-1;i++)for(let j=0;j<zs.length-1;j++){
   const corners=[vertex(i,j),vertex(i+1,j),vertex(i+1,j+1),vertex(i,j+1)];
   if(corners.some(v=>v===null))continue;const [a,b,c,d]=corners;ti.push(a,c,b,a,d,c);
  }
  const shoulders=mesh(tp,ti,grass,'Trávnaté svahy pri príjazde');shoulders.geometry.userData.uvProjection='xz';
- subtractTopSurfaces(shoulders,[wellnessOutline,...wellnessBeds.map(rectOutline)]);
+ subtractTopSurfaces(shoulders,[wellnessOutline,...wellnessBeds.map(rectOutline),rectOutline(access),rectOutline(ramp)]);
  // Wall bases follow terrain in short panels; overlapping footings prevent gaps.
  const terrain=(x,z)=>Math.max(-.06,courtTerrainHeight(x,z,ramp.bottom)??exteriorHeight(x,z)-.02);
  const bars=new Map();
