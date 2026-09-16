@@ -1,14 +1,14 @@
 import * as T from 'three';
 import {surface} from './surface-materials.js';
 import {ramp} from './project-geometry.js';
-import {hillsideParking as parking,parkingBays,parkingRoofLevel,cellars,cellarDoors} from './parking-layout.js';
+import {hillsideParking as parking,parkingBays,parkingRoofLevel,cellarRows,cellarDoors} from './parking-layout.js';
 import {buildCurvedParking} from './curved-parking.js';
 import {curvedOutline} from './curved-parking-layout.js';
 import {subtractTopSurfaces} from './surface-geometry.js';
 
 export function buildParkingAndStorage(){
  const root=new T.Group();root.name='Zapustené parkovanie a pivničné kobky';
- const parkingGroup=new T.Group(),storage=new T.Group();parkingGroup.name='Parkovanie pod rodinnými domami';storage.name='Pivničné kobky v pôvodnom parkovaní';root.add(parkingGroup,storage);
+ const parkingGroup=new T.Group(),storage=new T.Group();parkingGroup.name='Parkovanie pod rodinnými domami';storage.name='Pivničné kobky pod oboma záhradami';root.add(parkingGroup,storage);
  const concrete=surface('concrete'),white=surface('plaster'),paving=surface('paving'),wood=surface('wood');
  const metal=new T.MeshStandardMaterial({color:0x414d50,metalness:.58,roughness:.4});
  const line=new T.MeshStandardMaterial({color:0xe0e0d4,roughness:.85});
@@ -46,10 +46,11 @@ export function buildParkingAndStorage(){
   box(parkingGroup,bay.x,ceiling-.045,36.5,1.35,.08,.16,lamp,false);
  }
  const curved=buildCurvedParking(floor,number);parkingGroup.add(curved);occluders.push(...curved.userData.occluders);
- // Existing grass roof and slab are retained, eight openings become lockable rooms.
- const c=cellars,h=c.ceiling-c.floor;
+ // Both rows share the original doors, partitions, shelving and finish.
+ for(const [row,c] of cellarRows.entries()){
+ const h=c.ceiling-c.floor;
  for(let i=0;i<=c.count;i++)box(storage,c.x0+i*c.pitch,(c.ceiling+c.floor)/2,(c.front+c.back)/2,.14,h,c.back-c.front,white);
- for(const d of cellarDoors){
+ for(const d of cellarDoors.filter(d=>d.row===row)){
   const center=d.x+d.width/2,a=center-c.pitch/2,b=center+c.pitch/2;
   box(storage,(a+d.x)/2,(c.ceiling+c.floor)/2,c.front,d.x-a,h,.15,white);
   box(storage,(d.x+d.width+b)/2,(c.ceiling+c.floor)/2,c.front,b-d.x-d.width,h,.15,white);
@@ -62,9 +63,10 @@ export function buildParkingAndStorage(){
   for(let j=0;j<5;j++)box(pivot,d.width/2,1.34+j*.055,-.033,.57,.016,.012,line,false);
   box(pivot,d.width-.12,.95,-.065,.14,.025,.07,line,false);number(pivot,d.id,d.width/2,1.76,-.048);
   // Shelves at the back leave each doorway and the central walking strip clear.
-  for(const y of [.5,1.1,1.7])box(storage,center,y,.8,2.65,.065,.58,wood,false);
-  for(const x of [center-1.22,center+1.22])box(storage,x,.94,.8,.035,1.88,.54,metal,false);
-  box(storage,center,c.ceiling-.045,-1.6,.75,.075,.13,lamp,false);
+  for(const y of [.5,1.1,1.7])box(storage,center,y,c.back-.6,c.pitch-.475,.065,.58,wood,false);
+  for(const x of [center-c.pitch/2+.3425,center+c.pitch/2-.3425])box(storage,x,.94,c.back-.6,.035,1.88,.54,metal,false);
+  box(storage,center,c.ceiling-.045,(c.front+c.back)/2,.75,.075,.13,lamp,false);
+ }
  }
  const setDoors=open=>{doors.forEach(p=>p.rotation.y=open?-Math.PI/2:0);root.updateMatrixWorld(true)};
  setDoors(true);root.userData={parkingGroup,storage,curved,occluders,doors,setDoors};return root;
