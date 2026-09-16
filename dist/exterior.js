@@ -11,7 +11,7 @@ import {buildArchitectureFinish} from './architecture-finish.js';
 import {wellnessOutline,wellnessBeds} from './wellness-layout.js';
 import {courtSite,courtTerrainHeight} from './court-layout.js';
 import {subtractTopSurfaces,rectOutline} from './surface-geometry.js';
-import {garage,ramp,levels,footprints,gardenStairs,access} from './project-geometry.js';
+import {garage,ramp,levels,footprints,gardenStairs,gardenPaths,access} from './project-geometry.js';
 // Visual reconstruction of the 1 August 2018 references, fitted to the PDF footprint.
 // Facade opening rhythm and terrain are estimates, not measured survey geometry.
 export function buildExterior(){
@@ -88,13 +88,18 @@ export function buildExterior(){
  for(let z=garage.doorZ0+.07;z<garage.doorZ1;z+=.09)box(root,garage.x1+.22,garage.floor+.008,z,.23,.008,.023,coping);
  // Garden paths, retaining edges, stair links and planted borders.
  // One watertight stepped solid per flight, exactly meeting the landing.
- for(const x of gardenStairs.x){
-  const {z0,z1,top,count,width}=gardenStairs,run=(z1-z0)/count,rise=top/count;
-  const profile=new T.Shape();profile.moveTo(z0,0);profile.lineTo(z0,rise);
-  for(let i=0;i<count;i++){profile.lineTo(z0+(i+1)*run,(i+1)*rise);if(i<count-1)profile.lineTo(z0+(i+1)*run,(i+2)*rise)}
-  profile.lineTo(z1,0);profile.closePath();const geo=new T.ExtrudeGeometry(profile,{depth:width,bevelEnabled:false,curveSegments:1});geo.rotateY(-Math.PI/2);const flight=new T.Mesh(geo,paving);flight.position.x=x+width/2;flight.castShadow=true;flight.receiveShadow=true;flight.name='Continuous garden stairs';root.add(flight);
-  const length=access.pathEnd-gardenStairs.z1,center=(access.pathEnd+gardenStairs.z1)/2;box(root,x,(top-.18)/2,center,width,top-.18,length,earth);const path=box(root,x,top-.09,center,width,.18,length,paving);path.name='Ground-supported footpath';
-  for(const z of [12.8]){const a=x<0?-13.5:x+width/2,b=x<0?x-width/2:15.5;box(root,(a+b)/2,(top-.18)/2,z,b-a,top-.18,1.55,earth);box(root,(a+b)/2,top-.09,z,b-a,.18,1.55,paving)}
+ for(const f of gardenStairs.flights){
+  const {z0,z1,bottom,top,count}=gardenStairs,width=f.x1-f.x0,run=(z1-z0)/count,rise=(top-bottom)/count;
+  const profile=new T.Shape();profile.moveTo(z0,0);profile.lineTo(z0,bottom+rise);
+  for(let i=0;i<count;i++){profile.lineTo(z0+(i+1)*run,bottom+(i+1)*rise);if(i<count-1)profile.lineTo(z0+(i+1)*run,bottom+(i+2)*rise)}
+  profile.lineTo(z1,0);profile.closePath();const geo=new T.ExtrudeGeometry(profile,{depth:width,bevelEnabled:false,curveSegments:1});geo.rotateY(-Math.PI/2);const flight=new T.Mesh(geo,paving);flight.position.x=f.x1;flight.castShadow=true;flight.receiveShadow=true;flight.name='Continuous garden stairs';root.add(flight);
+ }
+ // The widened landing meets the garden paving directly, without a grass
+ // slot between the stairs, the supported walkway and the terrace edge.
+ for(const p of gardenPaths){
+  const {top}=gardenStairs,x=(p.x0+p.x1)/2,z=(p.z0+p.z1)/2,width=p.x1-p.x0,length=p.z1-p.z0;
+  box(root,x,(top-.18)/2,z,width,top-.18,length,earth);
+  const path=box(root,x,top-.09,z,width,.18,length,paving);path.name='Ground-supported footpath';
  }
  for(const x of [-33,35]){box(root,x,1.3,10.6,.22,2.6,26,white)}
  const planting=createPlanting();

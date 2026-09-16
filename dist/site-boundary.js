@@ -5,6 +5,7 @@ import {ramp,access,exteriorHeight} from './project-geometry.js';
 import {courtTerrainHeight} from './court-layout.js';
 import {entrance,serviceHouse,serviceShed,servicePaving,siteRoads,siteShoulderHeight,roadsideGarden,boundarySegments} from './site-layout.js';
 import {homeRoads} from './homes-layout.js';
+import {buildSocialPavilion} from './social-pavilion.js';
 import {wellnessOutline,wellnessBeds} from './wellness-layout.js';
 import {subtractTopSurfaces,roadOutline,roadEdges,rectOutline} from './surface-geometry.js';
 
@@ -98,13 +99,10 @@ export function buildSiteBoundary(){
  }
  barrel(h.x0-.25,h.x1+.25,h.z0-.3,h.z1+.3,h.base+h.eaves,h.rise);
  for(const z of [h.z0+.1,h.z1-.1])bar(new T.Vector3(h.x0-.08,h.base,z),new T.Vector3(h.x0-.08,h.base+h.eaves,z),.09,metal);
- const s=serviceShed,sx=(s.x0+s.x1)/2,sz=(s.z0+s.z1)/2;
- box(s.x0,s.base+1.42,sz,.22,2.84,s.z1-s.z0);for(const z of [s.z0,s.z1])box(sx,s.base+1.42,z,s.x1-s.x0,2.84,.22);
- for(let i=0;i<=3;i++)box(s.x1,s.base+1.4,s.z0+(s.z1-s.z0)*i/3,.18,2.8,.18);
- box(sx,s.base+2.76,sz,s.x1-s.x0+.45,.18,s.z1-s.z0+.5,silver).name='Otvorený prístrešok pri vedľajšom objekte';
+ const pavilion=buildSocialPavilion();root.add(pavilion);
  for(const [x,z] of [[-62,-15],[-61,11],[-61,22],[40,-35],[39,-18],[-25,-40],[23,-38]])plants.tree(x,z,terrain(x,z),.72,true);
  root.add(plants.finish());
  for(const [mat,matrices] of bars){const o=new T.InstancedMesh(new T.BoxGeometry(1,1,1),mat,matrices.length);matrices.forEach((m,i)=>o.setMatrixAt(i,m));o.name='Kovové profily oplotenia a odkvapov';o.castShadow=true;o.receiveShadow=true;root.add(o)}
  const setGate=open=>{gate.position.z=entrance.z-(open?entrance.slide:0)};setGate(true);
- root.userData={setGate,gate,estimatedFromPhotos:true,ancillaryPlacementReference:'assets/site-map.png'};return root;
+ root.userData={setGate,gate,pavilion,estimatedFromPhotos:true,ancillaryPlacementReference:'assets/site-map.png'};return root;
 }
