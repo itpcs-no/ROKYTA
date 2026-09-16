@@ -2,6 +2,7 @@
 // Ancillary footprints corrected against the supplied site map: the long wing
 // gives 2.5401 px/m; the pool fixes orientation (map right is model negative x).
 // Ground levels outside the PDF ramp remain estimates.
+import {curvedRoadPoints,curvedBankHeight} from './curved-parking-layout.js';
 export const entrance={x:44,z:30.5,width:6,slide:6.7};
 export const serviceHouse={x0:-57.7,x1:-51.3,z0:-10.25,z1:4.45,base:.06,eaves:3.1,rise:.75};
 export const serviceShed={x0:-60.7,x1:-56.7,z0:-32.85,z1:-23.05,base:.06};
@@ -43,7 +44,7 @@ function sample(points){
 const roadCache=new Map();
 export function siteRoads(level){
  if(!roadCache.has(level))roadCache.set(level,[
-  {name:'Cesta od brány okolo záhrady',width:5,points:sample([[48.75,30.5,level],[39,30.5,level],[16,30.5,level],[-22,30.5,level],[-37,30.5,level],[-46.5,30.5,level],[-51,27,1.35],[-51,18,.95],[-48.3,5.6,.06],[-48.6,-7.8,.06],[-49.3,-20,.06],[-50,-34,.06]])},
+  {name:'Cesta od brány okolo záhrady',width:5,points:[...sample([[48.75,30.5,level],[39,30.5,level],[16,30.5,level],[-22,30.5,level],[-37,30.5,level],[-47.5,30.5,level]]).slice(0,-1),...curvedRoadPoints(level),...sample([[-48.3,5.6,.06],[-48.6,-7.8,.06],[-49.3,-20,.06],[-50,-34,.06]]).slice(1)]},
   {name:'Vonkajšia príjazdová cesta',width:5.5,points:sample([[51.5,-65,.06],[51.5,-42,.06],[51.5,-15,.38],[51.5,14,level],[51.5,26,level],[51.5,34,level],[51.5,43,level],[51.5,70,.06]])}
  ]);
  return roadCache.get(level);
@@ -66,6 +67,7 @@ export function sitePavedHeight(x,z,level){
 export function siteShoulderHeight(x,z,level){
  // The existing court bank starts at z=33; never cover it with a second terrain.
  if(z>=33&&x<49)return null;
+ if(curvedBankHeight(x,z,level)!==null)return null;
  let y=null;
  if(!(x>-37&&x<39&&z<25))for(const road of siteRoads(level)){
   const p=closestRoad(x,z,road),r=road.width/2;

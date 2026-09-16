@@ -37,7 +37,7 @@ function cutConvex(subject,mask){
 
 // Remove coverage instead of stacking surfaces or using a depth-test override.
 // Bottoms and vertical supporting faces are retained, along with object identity.
-export function subtractTopSurfaces(mesh,polygons,trimBottom=false){
+export function subtractTopSurfaces(mesh,polygons,trimBottom=false,minUp=.85){
  const masks=polygons.flatMap(polygon=>T.ShapeUtils.triangulateShape(polygon.map(([x,z])=>new T.Vector2(x,z)),[]).map(indices=>{
   const points=indices.map(i=>polygon[i]);if(area(points)<0)points.reverse();return {points,bounds:bounds(points)};
  }));
@@ -48,7 +48,7 @@ export function subtractTopSurfaces(mesh,polygons,trimBottom=false){
   const triangle=Array.from({length:3},(_,j)=>new T.Vector3().fromBufferAttribute(p,index?index.getX(i+j):i+j).applyMatrix4(mesh.matrixWorld));
   normal.crossVectors(ab.subVectors(triangle[1],triangle[0]),ac.subVectors(triangle[2],triangle[0])).normalize();
   let pieces=[triangle];
-  if(normal.y>.85||(trimBottom&&normal.y<-.85)){
+  if(normal.y>minUp||(trimBottom&&normal.y<-.85)){
    const originalBounds=bounds(triangle.map(p=>[p.x,p.z]));
    for(const mask of masks){if(overlaps(originalBounds,mask.bounds))pieces=pieces.flatMap(piece=>cutConvex(piece,mask));if(!pieces.length)break}
    if(pieces.length!==1||pieces[0]!==triangle)clipped++;
