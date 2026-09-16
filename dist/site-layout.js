@@ -6,6 +6,9 @@ export const entrance={x:44,z:30.5,width:6,slide:6.7};
 export const serviceHouse={x0:-57.7,x1:-51.3,z0:-10.25,z1:4.45,base:.06,eaves:3.1,rise:.75};
 export const serviceShed={x0:-60.7,x1:-56.7,z0:-32.85,z1:-23.05,base:.06};
 export const servicePaving=[[-58.5,5.05],[-45.6,5.05],[-45.6,-11.05],[-46.9,-11.05],[-46.9,-33.65],[-61.5,-33.65],[-61.5,-22.25],[-55.8,-22.25],[-55.8,-11.05],[-58.5,-11.05]];
+// Fill the garden-side verge flush with the straight road; blend only its
+// outer ends into the surrounding terrain, not down into a ditch by the road.
+export const roadsideGarden={x0:-37,x1:39,z0:23.5,z1:28,blend:3.6};
 const clamp=x=>Math.max(0,Math.min(1,x));
 export function inSitePolygon(x,z,points){let inside=false;for(let i=0,j=points.length-1;i<points.length;j=i++){
  const [a,b]=points[i],[c,d]=points[j];if((b>z)!==(d>z)&&x<(c-a)*(z-b)/(d-b)+a)inside=!inside;
@@ -44,12 +47,18 @@ export function sitePavedHeight(x,z,level){
 }
 export function siteShoulderHeight(x,z,level){
  // The existing court bank starts at z=33; never cover it with a second terrain.
- if((z>=33&&x<49)||(x>-37&&x<39&&z<25))return null;
+ if(z>=33&&x<49)return null;
  let y=null;
- for(const road of siteRoads(level)){
+ if(!(x>-37&&x<39&&z<25))for(const road of siteRoads(level)){
   const p=closestRoad(x,z,road),r=road.width/2;
   if(p.distance>r&&p.distance<r+3.6){const t=clamp((p.distance-r)/3.6);y=Math.max(y??-.06,(p.height-.025)*(1-t)-.06*t)}
- }return y;
+ }
+ const g=roadsideGarden;
+ if(z<=g.z1){
+  const distance=Math.max(g.x0-x,0,x-g.x1,g.z0-z),t=clamp(1-distance/g.blend);
+  if(t>0){const weight=t*t*(3-2*t);y=(y??-.06)*(1-weight)+level*weight}
+ }
+ return y;
 }
 export const siteBoundary=[
  {points:[[44,27.2],[44,-41],[33,-48],[-35,-48]],type:'wall'},
