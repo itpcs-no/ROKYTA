@@ -5,15 +5,17 @@ export function createWalker(){
  const part=(g,geo,m,x,y,z)=>{const p=new T.Mesh(geo,m);p.position.set(x,y,z);p.castShadow=true;p.receiveShadow=true;g.add(p);return p};
  const box=(g,m,x,y,z,w,h,d)=>part(g,new T.BoxGeometry(w,h,d),m,x,y,z);
  const torso=new T.Shape();torso.moveTo(-.16,.8);torso.lineTo(.16,.8);torso.lineTo(.215,1.24);torso.lineTo(-.215,1.24);torso.closePath();const body=part(root,new T.ExtrudeGeometry(torso,{depth:.24,bevelEnabled:true,bevelSegments:1,steps:1,bevelSize:.014,bevelThickness:.014}),shirt,0,0,-.12);
- const skin=mat(0xd4a38e),hair=mat(0x332f29);
- part(root,new T.CylinderGeometry(.085,.085,.09,16),skin,0,1.29,0);
- part(root,new T.CylinderGeometry(.165,.165,.32,32),skin,0,1.47,0);
- // Keep the supplied portrait unchanged; select its face area through texture UVs.
- const face=new T.TextureLoader().load('assets/avatar-face.png');face.colorSpace=T.SRGBColorSpace;face.offset.set(.15,.12);face.repeat.set(.72,.74);
- const faceMaterial=new T.MeshStandardMaterial({map:face,roughness:.85});
- const portrait=part(root,new T.CylinderGeometry(.167,.167,.32,32,1,true,Math.PI-1,2),faceMaterial,0,1.47,0);portrait.name='Face from supplied portrait';
- part(root,new T.SphereGeometry(.169,24,12,0,Math.PI*2,0,Math.PI/2),hair,0,1.615,0).scale.y=.4;
- part(root,new T.CylinderGeometry(.075,.075,.045,16),hair,0,1.697,0);
+ part(root,new T.CylinderGeometry(.085,.085,.09,16),yellow,0,1.29,0);
+ part(root,new T.CylinderGeometry(.165,.165,.32,32),yellow,0,1.47,0).name='Yellow minifigure head';
+ part(root,new T.CylinderGeometry(.075,.075,.045,24),yellow,0,1.6525,0).name='Head stud';
+ // Simple black features follow the yellow cylinder, with no photo texture.
+ for(const side of [-1,1]){
+  const x=side*.06,z=-Math.sqrt(.168*.168-x*x);
+  const eye=part(root,new T.CircleGeometry(.019,24),black,x,1.515,z);
+  eye.rotation.y=Math.atan2(x,z);eye.castShadow=false;eye.name=side<0?'Left eye':'Right eye';
+ }
+ const smilePoints=Array.from({length:25},(_,i)=>{const a=i*Math.PI/24,x=-.073*Math.cos(a);return new T.Vector3(x,1.455-.04*Math.sin(a),-Math.sqrt(.168*.168-x*x))});
+ const smile=part(root,new T.TubeGeometry(new T.CatmullRomCurve3(smilePoints),32,.006,8,false),black,0,0,0);smile.castShadow=false;smile.name='Smile';
  box(root,blue,0,.77,0,.34,.14,.25);
  const legs=[],arms=[];
  for(const side of [-1,1]){const leg=new T.Group();leg.position.set(side*.1,.73,0);root.add(leg);box(leg,blue,0,-.28,0,.18,.53,.23);box(leg,blue,0,-.66,-.035,.18,.14,.3);legs.push(leg);
