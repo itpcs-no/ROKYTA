@@ -8,6 +8,7 @@ import {homeRoads} from './homes-layout.js';
 import {buildSocialPavilion} from './social-pavilion.js';
 import {wellnessOutline,wellnessBeds} from './wellness-layout.js';
 import {subtractTopSurfaces,roadOutline,roadEdges,rectOutline} from './surface-geometry.js';
+import {gardenBankOutline} from './garden-bank-layout.js';
 
 export function buildSiteBoundary(){
  const root=new T.Group();root.name='Príjazd, obvod areálu a vedľajšie objekty';
@@ -48,7 +49,7 @@ export function buildSiteBoundary(){
   if(corners.some(v=>v===null))continue;const [a,b,c,d]=corners;ti.push(a,c,b,a,d,c);
  }
  const shoulders=mesh(tp,ti,grass,'Trávnaté svahy pri príjazde');shoulders.geometry.userData.uvProjection='xz';
- subtractTopSurfaces(shoulders,[wellnessOutline,...wellnessBeds.map(rectOutline),rectOutline(access),rectOutline(ramp)]);
+ subtractTopSurfaces(shoulders,[wellnessOutline,...wellnessBeds.map(rectOutline),rectOutline(access),rectOutline(ramp),gardenBankOutline],false,0);
  // Wall bases follow terrain in short panels; overlapping footings prevent gaps.
  const terrain=(x,z)=>Math.max(-.06,courtTerrainHeight(x,z,ramp.bottom)??exteriorHeight(x,z)-.02);
  const bars=new Map();

@@ -6,6 +6,8 @@ import {buildSportsLandscape} from './sports-landscape.js';
 import {buildSiteBoundary} from './site-boundary.js';
 import {buildParkingAndStorage} from './parking-storage.js';
 import {cellars,eastCellars} from './parking-layout.js';
+import {buildGardenBank} from './garden-bank.js';
+import {gardenBankOutline} from './garden-bank-layout.js';
 import {buildPhotovoltaics} from './photovoltaics.js';
 import {buildOutdoorWellness} from './outdoor-wellness.js';
 import {buildArchitectureFinish} from './architecture-finish.js';
@@ -78,6 +80,7 @@ export function buildExterior(){
  // Keeping the original plane below it produced coplanar grass triangles.
  for(const points of [rectOutline(courtTerrainBounds),wellnessOutline,...wellnessBeds.map(rectOutline)]){const hole=new T.Path();points.forEach(([x,z],i)=>i?hole.lineTo(x,-z):hole.moveTo(x,-z));hole.closePath();groundShape.holes.push(hole)}
  const groundGeo=new T.ShapeGeometry(groundShape);groundGeo.rotateX(-Math.PI/2);groundGeo.userData.uvProjection='xz';const groundMesh=new T.Mesh(groundGeo,lawn);groundMesh.position.y=-.06;groundMesh.receiveShadow=true;groundMesh.name='Ground outside the graded hill';root.add(groundMesh);
+ subtractTopSurfaces(groundMesh,[gardenBankOutline]);
  const lowerPath=box(root,0,-.01,-7.8,74,.14,4.3,paving);lowerPath.name='Lower garden walkway';
  subtractTopSurfaces(lowerPath,[rectOutline({x0:-35.5,x1:-10.5,z0:-8.8,z1:-.8})]);
  for(const side of [-1,1]){
@@ -114,7 +117,8 @@ export function buildExterior(){
   box(root,x,(top-.18)/2,z,width,top-.18,length,earth);
   const path=box(root,x,top-.09,z,width,.18,length,paving);path.name='Ground-supported footpath';
  }
- for(const x of [-33,35]){box(root,x,1.3,10.6,.22,2.6,26,white)}
+ box(root,-33,1.3,10.6,.22,2.6,26,white);
+ root.add(buildGardenBank(ramp.bottom));
  const planting=createPlanting();
  for(let x=-32;x<34;x+=1.2){if(x<-11||x>13){planting.shrub(x,21);planting.shrub(x,-1.2);planting.tuft(x+.4,20.6,2.56,.16)}}
  for(const [x,z] of [[-29,16],[-18,17],[23,17],[31,10]]){planting.tree(x,z);for(let i=0;i<16;i++){const a=i*2.399;planting.tuft(x+Math.cos(a)*.55,z+Math.sin(a)*.55,2.55,.22)}}
