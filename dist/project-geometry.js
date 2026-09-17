@@ -4,6 +4,7 @@ import {sitePavedHeight,siteShoulderHeight} from './site-layout.js';
 import {hillsideParking,parkingBlockAt,parkingFloorHeight,parkingCeilingHeight,cellarAt,cellarRows} from './parking-layout.js';
 import {homeWalkingHeight} from './homes-layout.js';
 import {wellnessWalkingHeight} from './wellness-layout.js';
+import {gardenBankHeight} from './garden-bank-layout.js';
 export const garage={x0:-13.091288,x1:-2.341267,z0:15.503966,z1:23.828992,floor:2.78,doorZ0:17.403992,doorZ1:22.903974,doorHeight:3};
 export const ramp={x0:-1.398225,x1:10.789956,z0:15.878973,z1:23.578978,top:2.78,angle:6};
 ramp.bottom=ramp.top-(ramp.x1-ramp.x0)*Math.tan(ramp.angle*Math.PI/180);
@@ -41,6 +42,7 @@ export function exteriorHeight(x,z,referenceHeight){
  for(const c of cellarRows)if(x>=c.x0&&x<=c.x1&&z>=c.approachFront&&z<=c.front)y=c.floor;
  const sportsHeight=courtWalkingHeight(x,z,ramp.bottom);if(sportsHeight!==null)y=sportsHeight;
  const road=sitePavedHeight(x,z,ramp.bottom);if(road!==null)y=road;
+ const bank=gardenBankHeight(x,z,ramp.bottom);if(bank!==null)y=bank;
  // Stairs sit above the lower walkway: its broad footprint must not reset
  // the first treads to ground level and make the walker sink through them.
  if(z>=gardenStairs.z0&&z<gardenStairs.z1&&gardenStairs.flights.some(f=>x>=f.x0&&x<=f.x1))y=gardenStairHeight(z);

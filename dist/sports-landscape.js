@@ -4,6 +4,7 @@ import {ramp} from './project-geometry.js';
 import {courtSite,courtTerrainBounds,courtTerrainHeight,courtStairHeight} from './court-layout.js';
 import {curvedParking,curvedOutline} from './curved-parking-layout.js';
 import {subtractTopSurfaces,rectOutline} from './surface-geometry.js';
+import {gardenBankOutline} from './garden-bank-layout.js';
 import {hillsideHomes,inRect} from './homes-layout.js';
 import {buildHillsideHomes} from './hillside-homes.js';
 import {hillsideParking,parkingBlockAt,courtFrontWalls} from './parking-layout.js';
@@ -34,7 +35,7 @@ export function buildSportsLandscape(){
  const originalApproaches=hillsideParking.blocks.map(b=>rectOutline({x0:b.x0,x1:b.x1,z0:hillsideParking.front-5,z1:hillsideParking.front}));
  // The exact curved roof replaces the grid above the added bays. Include its
  // approach and every upward face, even steep ones, in the same terrain cut.
- subtractTopSurfaces(hill,[...originalApproaches,curvedOutline(curvedParking.depth,-5)],false,0);
+ subtractTopSurfaces(hill,[...originalApproaches,curvedOutline(curvedParking.depth,-5),gardenBankOutline],false,0);
  // The mound's front meets the existing road without taking over its surface.
  const skirt=[];for(let i=0;i<xs.length-1;i++){const x=xs[i],xx=xs[i+1];if(parkingBlockAt((x+xx)/2,s.z0))continue;const a=courtTerrainHeight(x,s.z0,base),b=courtTerrainHeight(xx,s.z0,base);skirt.push(x,-.06,s.z0,xx,b,s.z0,x,a,s.z0,x,-.06,s.z0,xx,-.06,s.z0,xx,b,s.z0)}
  const sg=new T.BufferGeometry();sg.setAttribute('position',new T.Float32BufferAttribute(skirt,3));sg.computeVertexNormals();const soil=new T.Mesh(sg,surface('soil'));root.add(soil);
