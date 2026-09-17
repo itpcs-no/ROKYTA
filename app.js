@@ -13,7 +13,6 @@ import {hillsideParking,parkingBays,parkingBlockAt,parkingCeilingHeight,cellarAt
 import {curvedParking,curvedAt} from './curved-parking-layout.js';
 import * as T from 'three';
 import {createWalker} from './avatar.js';
-import {createMountedRider} from './mounted-rider.js';
 import {garage,ramp,rampHeight,levels,slabThickness,footprints,gardenStairs,exteriorHeight} from './project-geometry.js';
 import {buildExterior} from './exterior.js';
 import {wellnessBarrierAt,wellnessCeiling,wellnessEntry,wellnessTarget} from './wellness-layout.js';
@@ -78,17 +77,15 @@ for(let f=0;f<4;f++){
  const geo=new T.PlaneGeometry(62,52);geo.rotateX(-Math.PI/2);const plan=new T.Mesh(geo,new T.MeshBasicMaterial({map:texture,transparent:true,opacity:.94,depthWrite:false}));plan.position.set(.175,.016,0);plan.visible=false;group.add(plan);group.userData.plan=plan;
 }
 const walker=createWalker();scene.add(walker.root);walker.root.visible=false;const nav=new T.Vector3();let walkingTime=0,jumpOffset=0,jumpVelocity=0;
-const rider=createMountedRider();scene.add(rider.root);rider.root.visible=false;let mounted=false;
-const riderFootprint=[...Array.from({length:9},(_,i)=>[0,-1.5+i*.3]),...[-.45,.45].flatMap(side=>Array.from({length:5},(_,i)=>[side,-.6+i*.3]))];
 let selected='all', mode='orbit', yaw=0,pitch=-.45,walkDistance=5.5,keys={},drag=null;const clock=new T.Clock();
 function setDoors(){renderer.shadowMap.needsUpdate=true;const shutter=exterior.userData.garageDoor;shutter.scale.y=$('doors').checked?.045:1;shutter.position.y=(garage.floor+garage.doorHeight)*(1-shutter.scale.y);doorPivots.forEach(p=>p.rotation.y=$('doors').checked?p.userData.opened:p.userData.closed);exterior.userData.parkingStorage.userData.setDoors($('doors').checked);exterior.userData.homes.userData.setDoors($('doors').checked)}
 $('doors').onchange=setDoors;
 $('gate').onchange=()=>{exterior.userData.site.userData.setGate($('gate').checked);renderer.shadowMap.needsUpdate=true};
-function status(){const visible=mode==='walk'&&!driving.active&&$('figure').checked;walker.root.visible=visible&&!mounted;rider.root.visible=visible&&mounted;$('ride').textContent=mounted?'Zosadnúť':'Na oslíkovi';$('ride').classList.toggle('active',mounted);$('ride').ariaPressed=String(mounted);$('startWalk').textContent=mounted?'Prejsť na panáčika':mode==='walk'?'Ukončiť prechádzku':'Prejsť sa s panáčikom';$('status').textContent=mounted?'Oslík · WASD / šípky · E: zosadnúť':`${selected==='all'?'Celá budova':`${selected+1}. NP`} · ${mode==='walk'?'WASD · pohyb':'obhliadka'}`;$('orbit').classList.toggle('active',mode==='orbit');$('walk').classList.toggle('active',mode==='walk'&&!mounted);document.body.classList.toggle('walking',mode==='walk') }
+function status(){walker.root.visible=mode==='walk'&&!driving.active&&$('figure').checked;$('startWalk').textContent=mode==='walk'?'Ukončiť prechádzku':'Prejsť sa s panáčikom';$('status').textContent=`${selected==='all'?'Celá budova':`${selected+1}. NP`} · ${mode==='walk'?'WASD · pohyb':'obhliadka'}`;$('orbit').classList.toggle('active',mode==='orbit');$('walk').classList.toggle('active',mode==='walk');document.body.classList.toggle('walking',mode==='walk')}
 function visibility(){document.body.classList.toggle('has-floor',selected!=='all');renderer.shadowMap.needsUpdate=true;exterior.visible=selected==='all'||mode==='walk';ground.visible=selected!=='all'&&selected!==0;grid.visible=selected!=='all'&&selected!==0;renderer.clippingPlanes=$('cutaway').checked?[new T.Plane(new T.Vector3(0,-1,0),2.55)]:[];for(let f=0;f<4;f++){groups[f].visible=selected==='all'||selected===f||(mode==='walk'&&f<selected);groups[f].userData.plan.visible=$('plan').checked&&selected===f} $('maptitle').textContent=`${(selected==='all'?1:selected)+1}. NP`;$('mapimg').src=`assets/plan${(selected==='all'?1:selected)+1}.png`;status()}
-function orbitHome(top=false){driving.leave();jumpOffset=jumpVelocity=0;mode='orbit';mounted=false;camera.near=.35;camera.updateProjectionMatrix();visibility();controls.enabled=true;const y=selected==='all'?4:data[selected].base;camera.up.set(0,1,0);camera.position.set(top?0:61,top?95:40,top?-.01:63);controls.target.set(0,y,-1);if(selected==='all'&&!top){controls.target.set(-8,3,-8);const direction=new T.Vector3(-58,28,-65),distance=Math.max(direction.length(),36/(Math.tan(camera.fov*Math.PI/360)*camera.aspect));camera.position.copy(controls.target).addScaledVector(direction.normalize(),distance);controls.maxDistance=Math.max(220,distance*1.25)}controls.update();$('dot').style.display='none';$('hint').textContent='Ťahaním otáčaj model. Kolieskom približuj. Pravým tlačidlom posúvaj.';status()}
-function walkAt(x=2.3,z=-4.1,outside=false){if(selected==='all'&&!outside){selected=1;$('floor').value='1';visibility()}driving.leave();jumpOffset=jumpVelocity=0;mode='walk';mounted=false;camera.near=.12;camera.updateProjectionMatrix();controls.enabled=false;nav.set(x,(selected==='all'?0:data[selected].base)+1.65,z);camera.position.copy(nav);yaw=0;pitch=$('figure').checked?-.45:0;camera.rotation.order='YXZ';camera.rotation.set(0,0,0);$('hint').textContent='WASD / šípky: pohyb · ťahanie myšou: pohľad do strán aj hore/dole · koliesko: vzdialenosť · medzerník: skok · E: nastúpiť/vystúpiť · Shift: beh · Esc: obhliadka. Podlažie zmeníš hore; klik do mapy ťa premiestni.';visibility();status();$('panel').classList.remove('open')}
-$('figure').onchange=()=>{pitch=$('figure').checked?-.45:0;status()};$('startWalk').onclick=()=>mounted?dismountRider():mode==='walk'?orbitHome():selected==='all'?walkAt(5,-31,true):walkAt();
+function orbitHome(top=false){driving.leave();jumpOffset=jumpVelocity=0;mode='orbit';camera.near=.35;camera.updateProjectionMatrix();visibility();controls.enabled=true;const y=selected==='all'?4:data[selected].base;camera.up.set(0,1,0);camera.position.set(top?0:61,top?95:40,top?-.01:63);controls.target.set(0,y,-1);if(selected==='all'&&!top){controls.target.set(-8,3,-8);const direction=new T.Vector3(-58,28,-65),distance=Math.max(direction.length(),36/(Math.tan(camera.fov*Math.PI/360)*camera.aspect));camera.position.copy(controls.target).addScaledVector(direction.normalize(),distance);controls.maxDistance=Math.max(220,distance*1.25)}controls.update();$('dot').style.display='none';$('hint').textContent='Ťahaním otáčaj model. Kolieskom približuj. Pravým tlačidlom posúvaj.';status()}
+function walkAt(x=2.3,z=-4.1,outside=false){if(selected==='all'&&!outside){selected=1;$('floor').value='1';visibility()}driving.leave();jumpOffset=jumpVelocity=0;mode='walk';camera.near=.12;camera.updateProjectionMatrix();controls.enabled=false;nav.set(x,(selected==='all'?0:data[selected].base)+1.65,z);camera.position.copy(nav);yaw=0;pitch=$('figure').checked?-.45:0;camera.rotation.order='YXZ';camera.rotation.set(0,0,0);$('hint').textContent='WASD / šípky: pohyb · ťahanie myšou: pohľad do strán aj hore/dole · koliesko: vzdialenosť · medzerník: skok · E: nastúpiť/vystúpiť · Shift: beh · Esc: obhliadka. Podlažie zmeníš hore; klik do mapy ťa premiestni.';visibility();status();$('panel').classList.remove('open')}
+$('figure').onchange=()=>{pitch=$('figure').checked?-.45:0;status()};$('startWalk').onclick=()=>mode==='walk'?orbitHome():selected==='all'?walkAt(5,-31,true):walkAt();
 $('floor').onchange=()=>{selected=$('floor').value==='all'?'all':Number($('floor').value);$('cutaway').checked=false;visibility();if(mode==='walk'){if(selected==='all')walkAt(5,-31,true);else walkAt(selected===3?1:2.3,selected===3?-5:-4.1)}else orbitHome()};$('orbit').onclick=()=>orbitHome();$('walk').onclick=()=>selected==='all'?walkAt(5,-31,true):walkAt();$('top').onclick=()=>orbitHome(true);$('reset').onclick=()=>orbitHome();$('plan').onchange=visibility;$('cutaway').onchange=visibility;$('panelToggle').onclick=()=>$('panel').classList.toggle('open');
 $('poolView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();const target=new T.Vector3(wellnessTarget.x,wellnessTarget.y,wellnessTarget.z),direction=new T.Vector3(-.85,1.2,-1).normalize(),distance=Math.max(39,15/Math.sin(Math.atan(Math.tan(camera.fov*Math.PI/360)*Math.min(camera.aspect,1))));controls.target.copy(target);camera.position.copy(target).addScaledVector(direction,distance);controls.maxDistance=Math.max(150,distance*1.2);controls.update();$('panel').classList.remove('open')};
 $('poolWalk').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(wellnessEntry.x,wellnessEntry.z,true);yaw=0;pitch=-.4};
@@ -108,7 +105,6 @@ const cars=exterior.getObjectByName('Cars in covered parking');
 const driving=createDriving(cars,exteriorHeight,(x,z)=>canMove(x,z));
 function useCar(){
  if(mode!=='walk'||jumpOffset>0)return;
- if(mounted){dismountRider();return}
  if(driving.active){
   const car=driving.active;let exit=null;
   for(const [side,back] of [[1.7,0],[-1.7,0],[0,3],[0,-3]]){const x=car.position.x+side*Math.cos(car.rotation.y)+back*Math.sin(car.rotation.y),z=car.position.z-side*Math.sin(car.rotation.y)+back*Math.cos(car.rotation.y);if(canMove(x,z)&&Math.abs(exteriorHeight(x,z)-car.position.y)<.3&&!cars.children.some(c=>c!==car&&Math.hypot(x-c.position.x,z-c.position.z)<1.4)){exit={x,z};break}}
@@ -123,7 +119,7 @@ $('parkingView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway')
 $('cellarsView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(cellarDoors[0].x+cellars.doorWidth/2,cellars.front-1.4,true);yaw=Math.PI;pitch=-.25};
 $('eastCellarsView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(eastCellars.x0+eastCellars.pitch/2,eastCellars.front-1.4,true);yaw=Math.PI;pitch=-.25;$('panel').classList.remove('open')};
 $('enterCar').onclick=useCar;
-const mapped={ArrowUp:'w',ArrowDown:'s',ArrowLeft:'a',ArrowRight:'d'};window.addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;const k=mapped[e.key]||e.key.toLowerCase();if(mode==='walk'&&e.code==='Space'){e.preventDefault();if(!e.repeat&&!driving.active&&jumpOffset===0)jumpVelocity=mounted?3.6:4.2}if(mode==='walk'&&k==='e'&&!e.repeat){e.preventDefault();useCar()}keys[k]=true;if(mode==='walk'&&['w','a','s','d'].includes(k))e.preventDefault();if(e.key==='Escape')orbitHome()});window.addEventListener('keyup',e=>{keys[mapped[e.key]||e.key.toLowerCase()]=false});window.addEventListener('blur',()=>{keys={};drag=null});document.querySelectorAll('[data-move]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);keys[b.dataset.move]=true};b.onpointerup=b.onpointercancel=()=>keys[b.dataset.move]=false});
+const mapped={ArrowUp:'w',ArrowDown:'s',ArrowLeft:'a',ArrowRight:'d'};window.addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;const k=mapped[e.key]||e.key.toLowerCase();if(mode==='walk'&&e.code==='Space'){e.preventDefault();if(!e.repeat&&!driving.active&&jumpOffset===0)jumpVelocity=4.2}if(mode==='walk'&&k==='e'&&!e.repeat){e.preventDefault();useCar()}keys[k]=true;if(mode==='walk'&&['w','a','s','d'].includes(k))e.preventDefault();if(e.key==='Escape')orbitHome()});window.addEventListener('keyup',e=>{keys[mapped[e.key]||e.key.toLowerCase()]=false});window.addEventListener('blur',()=>{keys={};drag=null});document.querySelectorAll('[data-move]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);keys[b.dataset.move]=true};b.onpointerup=b.onpointercancel=()=>keys[b.dataset.move]=false});
 function inside(x,z,p){let c=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const a=p[i],b=p[j];if((a[1]>z)!==(b[1]>z)&&x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])c=!c}return c}
 function canMove(x,z){
  if($('free').checked)return true;
@@ -152,33 +148,6 @@ function coveredCeiling(x=nav.x,z=nav.z,foot=nav.y-1.65){
  if(homeAt(x,z))return homesLevel+2.98;
  return null;
 }
-function canRideMove(x,z,heading){
- const base=exteriorHeight(x,z,nav.y-1.65),ceiling=coveredCeiling(x,z,base);
- if(ceiling!==null&&ceiling-base<rider.height+.06)return false;
- if(!canMove(x,z))return false;
- const sine=Math.sin(heading),cosine=Math.cos(heading);
- for(const [side,along] of riderFootprint){
-  const px=x+side*cosine+along*sine,pz=z-side*sine+along*cosine;
-  if(!canMove(px,pz))return false;
-  if((side===0||Math.abs(along)<.001)&&Math.abs(exteriorHeight(px,pz,base)-base)>.46)return false;
- }
- return true;
-}
-function dismountRider(){
- if(jumpOffset>0)return;
- const heading=rider.root.rotation.y,foot=nav.y-1.65;
- for(const side of [1,-1,0]){const x=nav.x+side*Math.cos(heading),z=nav.z-side*Math.sin(heading);if(canMove(x,z)&&Math.abs(exteriorHeight(x,z,foot)-foot)<.35){mounted=false;walkAt(x,z,true);walker.root.rotation.y=heading;return}}
- $('status').textContent='Na zosadnutie tu nie je miesto.';
-}
-function mountRider(){
- if(mounted){dismountRider();return}
- const keep=mode==='walk'&&selected==='all'&&!driving.active,x=keep?nav.x:25,z=keep?nav.z:30.5;let heading=keep?walker.root.rotation.y:Math.PI/2;
- selected='all';$('floor').value='all';$('cutaway').checked=false;$('figure').checked=true;walkAt(x,z,true);nav.y=exteriorHeight(x,z,nav.y-1.65)+1.65;
- if(!canRideMove(x,z,heading)){heading=Math.PI/2;nav.set(25,exteriorHeight(25,30.5)+1.65,30.5)}
- mounted=true;rider.root.position.set(nav.x,nav.y-1.65,nav.z);rider.root.rotation.set(0,heading,0);yaw=heading+Math.PI*.78;pitch=-.16;walkDistance=5.6;
- $('hint').textContent='WASD / šípky: jazda · ťahanie myšou: otáčanie a sklon pohľadu · koliesko: vzdialenosť · Shift: rýchlejší krok · medzerník: skok · E alebo Zosadnúť: panáčik · Esc: obhliadka.';status();
-}
-$('ride').onclick=mountRider;
 function keepCoveredCamera(eyeY){
  if(selected!=='all')return;
  const ceiling=coveredCeiling(),foot=nav.y-1.65;
@@ -196,10 +165,38 @@ function keepCoveredCamera(eyeY){
  camera.lookAt(cameraTarget);
 }
 finishSurfaces(scene,renderer);
-function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderQuality.resize()}window.addEventListener('resize',resize);setDoors();visibility();orbitHome();if(renderer.isWebGLRenderer){$('loading').textContent='Dokončujem materiály a odrazy…';await waitForSurfaceImages();addSceneReflections(scene,renderer);renderer.shadowMap.needsUpdate=true}const batching=groups.map((group,i)=>batchStaticMeshes(group,[...floorMeshes[i],group.userData.plan]));batching.push(batchStaticMeshes(exterior));const shelter=exterior.userData.site.userData.pavilion;shelter.userData.batching=batchStaticMeshes(shelter);const curved=exterior.userData.parkingStorage.userData.curved;curved.children.filter(o=>o.isGroup).forEach(g=>batchStaticMeshes(g));curved.userData.batching=batchStaticMeshes(curved);scene.userData.batching=batching;$('loading').style.display='none';renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),.05);atmosphereTime+=dt;updateSurfaceTime(atmosphereTime);exterior.userData.wellness.userData.update(dt);if(mode==='walk'){const previousX=nav.x,previousZ=nav.z;if(selected==='all')nav.y=exteriorHeight(nav.x,nav.z,nav.y-1.65)+1.65;const f=(keys.w?1:0)-(keys.s?1:0),r=(keys.d?1:0)-(keys.a?1:0),norm=Math.hypot(f,r)||1,speed=(keys.shift?6:2.7)*dt/norm,dx=(-Math.sin(yaw)*f+Math.cos(yaw)*r)*speed,dz=(-Math.cos(yaw)*f-Math.sin(yaw)*r)*speed;const x=Math.max(-110,Math.min(110,nav.x+dx)),z=Math.max(-110,Math.min(110,nav.z+dz));if(driving.active){const heading=driving.active.rotation.y;driving.update(dt,f,-r,!!keys[' ']);yaw+=driving.active.rotation.y-heading;nav.set(driving.active.position.x,driving.active.position.y+1.65,driving.active.position.z);$('status').textContent=`Auto · ${Math.round(Math.abs(driving.speed)*3.6)} km/h · E: vystúpiť · medzerník: brzda`}else{if(mounted){if(f||r){const desired=yaw+Math.atan2(-r,f),difference=Math.atan2(Math.sin(desired-rider.root.rotation.y),Math.cos(desired-rider.root.rotation.y)),heading=rider.root.rotation.y+T.MathUtils.clamp(difference,-dt*4,dt*4),step=(keys.shift?4.2:2.1)*dt,rx=Math.max(-110,Math.min(110,nav.x-Math.sin(heading)*step)),rz=Math.max(-110,Math.min(110,nav.z-Math.cos(heading)*step));if(canRideMove(rx,rz,heading)){nav.x=rx;nav.z=rz;rider.root.rotation.y=heading}else if(canRideMove(nav.x,nav.z,heading))rider.root.rotation.y=heading}}else{if(canMove(x,nav.z))nav.x=x;if(canMove(nav.x,z))nav.z=z}if(selected==='all')nav.y=exteriorHeight(nav.x,nav.z,nav.y-1.65)+1.65;if(jumpVelocity!==0||jumpOffset>0){jumpVelocity-=12*dt;jumpOffset=Math.max(0,jumpOffset+jumpVelocity*dt);const ceiling=coveredCeiling();if(ceiling!==null&&jumpOffset>ceiling-(nav.y-1.65)-(mounted?rider.height:1.75)){jumpOffset=Math.max(0,ceiling-(nav.y-1.65)-(mounted?rider.height:1.75));jumpVelocity=Math.min(0,jumpVelocity)}if(jumpOffset===0)jumpVelocity=0}}const mx=(nav.x+30.825)/62,mz=(nav.z+26)/52;$('dot').style.display=mx>=0&&mx<=1&&mz>=0&&mz<=1?'block':'none';$('dot').style.left=mx*100+'%';$('dot').style.top=mz*100+'%'
- walkingTime+=dt;const eyeY=nav.y+jumpOffset+(mounted?rider.eyeHeight-1.65:0);walker.root.position.set(nav.x,nav.y+jumpOffset-1.65,nav.z);if(f||r)walker.root.rotation.y=yaw+Math.atan2(-r,f);walker.animate(walkingTime,!!(f||r));if(mounted){rider.root.position.set(nav.x,nav.y-1.65+jumpOffset,nav.z);rider.animate(walkingTime,Math.hypot(nav.x-previousX,nav.z-previousZ)/Math.max(dt,.000001),dt,jumpOffset>0,(x,z)=>exteriorHeight(x,z,nav.y-1.65))}
- if($('figure').checked||driving.active){const targetY=eyeY-(mounted?.65:.35),horizontal=walkDistance*Math.cos(pitch);camera.position.set(nav.x+Math.sin(yaw)*horizontal,Math.max(nav.y-1.4,targetY-walkDistance*Math.sin(pitch)),nav.z+Math.cos(yaw)*horizontal);camera.lookAt(nav.x,targetY,nav.z);keepCoveredCamera(eyeY)}else{camera.position.set(nav.x,eyeY,nav.z);camera.rotation.set(pitch,yaw,0,'YXZ')}
- const insideHome=selected==='all'&&homeAt(nav.x,nav.z),indoors=!!insideHome||selected!=='all'||footprints[0].some(([a,b,c,d])=>nav.x>a&&nav.x<c&&nav.z>b&&nav.z<d);
- renderer.clippingPlanes=$('cutaway').checked?[new T.Plane(new T.Vector3(0,-1,0),2.55)]:indoors&&$('figure').checked?[new T.Plane(new T.Vector3(0,-1,0),(mounted?nav.y-1.65+rider.height+.15:(insideHome?homesLevel:selected==='all'?0:levels[selected])+2.3))]:[];
- renderer.shadowMap.needsUpdate=true;}else controls.update();renderQuality.render(scene,camera)});
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderQuality.resize()}window.addEventListener('resize',resize);setDoors();visibility();orbitHome();if(renderer.isWebGLRenderer){$('loading').textContent='Dokončujem materiály a odrazy…';await waitForSurfaceImages();addSceneReflections(scene,renderer);renderer.shadowMap.needsUpdate=true}const batching=groups.map((group,i)=>batchStaticMeshes(group,[...floorMeshes[i],group.userData.plan]));batching.push(batchStaticMeshes(exterior));const shelter=exterior.userData.site.userData.pavilion;shelter.userData.batching=batchStaticMeshes(shelter);const curved=exterior.userData.parkingStorage.userData.curved;curved.children.filter(o=>o.isGroup).forEach(g=>batchStaticMeshes(g));curved.userData.batching=batchStaticMeshes(curved);scene.userData.batching=batching;$('loading').style.display='none';renderer.setAnimationLoop(()=>{
+ const dt=Math.min(clock.getDelta(),.05);atmosphereTime+=dt;updateSurfaceTime(atmosphereTime);exterior.userData.wellness.userData.update(dt);
+ if(mode==='walk'){
+  if(selected==='all')nav.y=exteriorHeight(nav.x,nav.z,nav.y-1.65)+1.65;
+  const f=(keys.w?1:0)-(keys.s?1:0),r=(keys.d?1:0)-(keys.a?1:0),norm=Math.hypot(f,r)||1,speed=(keys.shift?6:2.7)*dt/norm;
+  const dx=(-Math.sin(yaw)*f+Math.cos(yaw)*r)*speed,dz=(-Math.cos(yaw)*f-Math.sin(yaw)*r)*speed;
+  const x=Math.max(-110,Math.min(110,nav.x+dx)),z=Math.max(-110,Math.min(110,nav.z+dz));
+  if(driving.active){
+   const heading=driving.active.rotation.y;driving.update(dt,f,-r,!!keys[' ']);yaw+=driving.active.rotation.y-heading;
+   nav.set(driving.active.position.x,driving.active.position.y+1.65,driving.active.position.z);
+   $('status').textContent=`Auto · ${Math.round(Math.abs(driving.speed)*3.6)} km/h · E: vystúpiť · medzerník: brzda`;
+  }else{
+   if(canMove(x,nav.z))nav.x=x;if(canMove(nav.x,z))nav.z=z;
+   if(selected==='all')nav.y=exteriorHeight(nav.x,nav.z,nav.y-1.65)+1.65;
+   if(jumpVelocity!==0||jumpOffset>0){
+    jumpVelocity-=12*dt;jumpOffset=Math.max(0,jumpOffset+jumpVelocity*dt);const ceiling=coveredCeiling();
+    if(ceiling!==null&&jumpOffset>ceiling-(nav.y-1.65)-1.75){jumpOffset=Math.max(0,ceiling-(nav.y-1.65)-1.75);jumpVelocity=Math.min(0,jumpVelocity)}
+    if(jumpOffset===0)jumpVelocity=0;
+   }
+  }
+  const mx=(nav.x+30.825)/62,mz=(nav.z+26)/52;$('dot').style.display=mx>=0&&mx<=1&&mz>=0&&mz<=1?'block':'none';$('dot').style.left=mx*100+'%';$('dot').style.top=mz*100+'%';
+  walkingTime+=dt;const eyeY=nav.y+jumpOffset;walker.root.position.set(nav.x,nav.y+jumpOffset-1.65,nav.z);
+  if(f||r)walker.root.rotation.y=yaw+Math.atan2(-r,f);walker.animate(walkingTime,!!(f||r));
+  if($('figure').checked||driving.active){
+   const targetY=eyeY-.35,horizontal=walkDistance*Math.cos(pitch);
+   camera.position.set(nav.x+Math.sin(yaw)*horizontal,Math.max(nav.y-1.4,targetY-walkDistance*Math.sin(pitch)),nav.z+Math.cos(yaw)*horizontal);
+   camera.lookAt(nav.x,targetY,nav.z);keepCoveredCamera(eyeY);
+  }else{camera.position.set(nav.x,eyeY,nav.z);camera.rotation.set(pitch,yaw,0,'YXZ')}
+  const insideHome=selected==='all'&&homeAt(nav.x,nav.z),indoors=!!insideHome||selected!=='all'||footprints[0].some(([a,b,c,d])=>nav.x>a&&nav.x<c&&nav.z>b&&nav.z<d);
+  renderer.clippingPlanes=$('cutaway').checked?[new T.Plane(new T.Vector3(0,-1,0),2.55)]:indoors&&$('figure').checked?[new T.Plane(new T.Vector3(0,-1,0),(insideHome?homesLevel:selected==='all'?0:levels[selected])+2.3)]:[];
+  renderer.shadowMap.needsUpdate=true;
+ }else controls.update();
+ renderQuality.render(scene,camera);
+});
 }
