@@ -29,8 +29,18 @@ export const access={x0:10.789956,x1:ramp.x1,z0:ramp.z1,z1:28,level:ramp.bottom,
 export function accessHeight(x,z){const t=Math.max(0,Math.min(1,(z-access.z0)/(access.z1-access.z0)));return rampHeight(x)+(access.level-rampHeight(x))*t}
 export const gardenPaths=[
  ...gardenStairs.flights.map(f=>({...f,z0:gardenStairs.z1,z1:access.pathEnd})),
- {x0:-13.5,x1:-11.35,z0:12.025,z1:access.pathEnd}
+ {x0:-13.5,x1:-11.35,z0:12.025,z1:access.pathEnd},
+ // Close the open corner between the cross path and the caretaker facade.
+ {x0:-13.5,x1:-9.25,z0:access.pathEnd,z1:garage.z0}
 ];
+// The long gap between the west lawn and its supported path starts behind
+// the cellar back wall. The fill must not occupy any of the storage rooms.
+export const gardenInfill={x0:-13.5,x1:-11.35,z0:1.5,z1:12.025,lawn:2.55,path:gardenStairs.top};
+export function gardenInfillHeight(x,z){
+ const r=gardenInfill;
+ if(x<r.x0-1e-8||x>r.x1+1e-8||z<r.z0-1e-8||z>r.z1+1e-8)return null;
+ return r.lawn+(r.path-r.lawn)*Math.max(0,Math.min(1,(x-r.x0)/(r.x1-r.x0)));
+}
 // Shared footprints keep paving, its turf cutouts and road shoulders aligned.
 export const gardenPavedAreas=[...gardenPaths,
  {x0:-32.5,x1:-13.5,z0:20.4,z1:24.4},sideApproach,
@@ -57,6 +67,7 @@ export function exteriorHeight(x,z,referenceHeight){
  // the first treads to ground level and make the walker sink through them.
  if(z>=gardenStairs.z0&&z<gardenStairs.z1&&gardenStairs.flights.some(f=>x>=f.x0&&x<=f.x1))y=gardenStairHeight(z);
  if(gardenPaths.some(p=>x>=p.x0&&x<=p.x1&&z>=p.z0&&z<=p.z1))y=gardenStairs.top;
+ const infill=gardenInfillHeight(x,z);if(infill!==null)y=infill;
  // Distinguish the ground floor from the grass roof at the same x/z position.
  if(parkingBlockAt(x,z)&&(referenceHeight===undefined||referenceHeight<parkingCeilingHeight(x,z,ramp.bottom)+.1))y=parkingFloorHeight(x,z,ramp.bottom);
  const cellar=cellarAt(x,z);if(cellar)y=referenceHeight!==undefined&&referenceHeight>cellar.ceiling+.05?cellar.roofLevel:cellar.floor;
