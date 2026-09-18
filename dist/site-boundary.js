@@ -1,7 +1,7 @@
 import * as T from 'three';
 import {surface,glassMaterial} from './surface-materials.js';
 import {createPlanting} from './planting.js';
-import {ramp,access,exteriorHeight} from './project-geometry.js';
+import {ramp,access,exteriorHeight,gardenPavedAreas} from './project-geometry.js';
 import {courtTerrainHeight} from './court-layout.js';
 import {entrance,serviceHouse,serviceShed,servicePaving,siteRoads,siteShoulderHeight,roadsideGarden,boundarySegments} from './site-layout.js';
 import {homeRoads} from './homes-layout.js';
@@ -49,7 +49,7 @@ export function buildSiteBoundary(){
   if(corners.some(v=>v===null))continue;const [a,b,c,d]=corners;ti.push(a,c,b,a,d,c);
  }
  const shoulders=mesh(tp,ti,grass,'Trávnaté svahy pri príjazde');shoulders.geometry.userData.uvProjection='xz';
- subtractTopSurfaces(shoulders,[wellnessOutline,...wellnessBeds.map(rectOutline),rectOutline(access),rectOutline(ramp),gardenBankOutline],false,0);
+ subtractTopSurfaces(shoulders,[wellnessOutline,...wellnessBeds.map(rectOutline),...gardenPavedAreas.map(rectOutline),rectOutline(access),rectOutline(ramp),gardenBankOutline],false,0);
  // Wall bases follow terrain in short panels; overlapping footings prevent gaps.
  const terrain=(x,z)=>Math.max(-.06,courtTerrainHeight(x,z,ramp.bottom)??exteriorHeight(x,z)-.02);
  const bars=new Map();
