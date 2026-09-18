@@ -1,3 +1,4 @@
+import {buildApartmentFurnishings,furnishingsBarrierAt} from './apartment-furnishings.js';
 import {applyPoolApartment,buildPoolApartment,apartmentBarrierAt} from './pool-apartment.js';
 import {applyCaretakerLayout,buildCaretakerInterior,caretaker,caretakerBarrierAt} from './caretaker-house.js';
 import {createDriving} from './driving.js';
@@ -24,7 +25,7 @@ import {OrbitControls} from './assets/OrbitControls.js';
 const $=id=>document.getElementById(id), view=$('view');
 try{await start()}catch(e){$('loading').style.display='block';$('loading').textContent='Model sa nepodarilo načítať. Skús obnoviť stránku v prehliadači s podporou WebGL.';console.error(e)}
 async function start(){
-const [data]=await Promise.all([fetch('./assets/model.json').then(r=>{if(!r.ok)throw Error('model');return r.json()}),prepareCarAssets()]);
+const [furnishingData,data]=await Promise.all([fetch('./assets/furniture-layout.json').then(r=>{if(!r.ok)throw Error('furniture layout');return r.json()}),fetch('./assets/model.json').then(r=>{if(!r.ok)throw Error('model');return r.json()}),prepareCarAssets()]);
 data.forEach((level,i)=>level.base=levels[i]);applyCaretakerLayout(data);applyPoolApartment(data);
 const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;renderer.setClearColor(0xdce6eb);view.append(renderer.domElement);renderer.outputColorSpace=T.SRGBColorSpace;
 const scene=new T.Scene();const camera=new T.PerspectiveCamera(48,innerWidth/innerHeight,.35,1600);const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.maxDistance=150;controls.minDistance=2;controls.maxPolarAngle=Math.PI*.49;controls.target.set(0,3,-3);
@@ -79,6 +80,7 @@ for(let f=0;f<4;f++){
   if(i)subtractTopSurfaces(slab,footprints[f].slice(0,i).map(([x0,z0,x1,z1])=>rectOutline({x0,z0,x1,z1})),true);
   floorMeshes[f].push(slab);
  }
+ group.add(buildApartmentFurnishings(f,furnishingData.floors[f]));
  if(f===0)group.add(buildPoolApartment());
  if(f===1)group.add(buildCaretakerInterior());
  const geo=new T.PlaneGeometry(62,52);geo.rotateX(-Math.PI/2);const plan=new T.Mesh(geo,new T.MeshBasicMaterial({map:texture,transparent:true,opacity:.94,depthWrite:false}));plan.position.set(.175,.016,0);plan.visible=false;group.add(plan);group.userData.plan=plan;
@@ -142,7 +144,7 @@ function canMove(x,z){
  if(selected==='all'&&homeBarrierAt(x,z,$('doors').checked))return false;
  if(selected==='all'&&siteBarrierAt(x,z,$('gate').checked,$('secondaryGate').checked))return false;
  const floor=selected==='all'?(nav.y-1.65>2.5?1:0):selected;
- if(caretakerBarrierAt(x,z,nav.y-1.65)||apartmentBarrierAt(x,z,nav.y-1.65))return false;
+ if(furnishingsBarrierAt(x,z,nav.y-1.65)||caretakerBarrierAt(x,z,nav.y-1.65)||apartmentBarrierAt(x,z,nav.y-1.65))return false;
  if(selected!=='all'){
   let supported=footprints[floor].some(([a,b,c,d])=>x>=a+.15&&x<=c-.15&&z>=b+.15&&z<=d-.15);
   if(floor===2)supported ||= inside(x,z,exterior.userData.deckOutline);
