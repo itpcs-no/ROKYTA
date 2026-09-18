@@ -1,7 +1,13 @@
 import * as T from 'three';
 
-// Linear HDR image with contact shading, restrained highlight bloom and output
-// transform. One geometry pass; quality can be reduced on slower devices.
+// Linear HDR image with contact shading and one output transform. Native
+// resolution is the default; reduced-resolution modes are explicit choices.
+export function renderPixelRatio(width,height,dpr,quality='ultra',maxDimension=16384){
+ const native=Math.min(dpr||1,maxDimension/width,maxDimension/height);
+ if(quality==='ultra')return native;
+ const smooth=quality==='smooth',mobile=width<760,budget=smooth?1400000:4200000;
+ return Math.min(native,smooth?1.2:mobile?1.5:2,Math.sqrt(budget/(width*height)));
+}
 export const qualityVertex=`varying vec2 vUv;
 void main(){vUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}`;
 export const qualityFragment=`
@@ -35,16 +41,8 @@ float contactShadow(vec2 uv){
  return clamp(1.0-occ*.1425,.64,1.0);
 }
 void main(){
- vec2 px=1.0/resolution;vec3 color=texture2D(tColor,vUv).rgb;
- vec3 neighbours=(texture2D(tColor,vUv+vec2(px.x,0.0)).rgb+texture2D(tColor,vUv-vec2(px.x,0.0)).rgb+texture2D(tColor,vUv+vec2(0.0,px.y)).rgb+texture2D(tColor,vUv-vec2(0.0,px.y)).rgb)*.25;
- // Keep fine solar-cell lines and distant leaf edges calm, without sharpening
- // halos around the white facade.
- float edge=length(color-neighbours)/max(length(color),.2);
- color=mix(color,neighbours,smoothstep(.12,.6,edge)*.10);
+ vec3 color=texture2D(tColor,vUv).rgb;
  if(detail>.5)color*=contactShadow(vUv);
- vec3 bloom=vec3(0.0);
- for(int i=0;i<4;i++){float a=float(i)*1.5707963;vec2 off=vec2(cos(a),sin(a))*px*6.0;vec3 c=texture2D(tColor,vUv+off).rgb;bloom+=max(c-vec3(2.1),vec3(0.0));}
- color+=bloom*.008;
  vec2 centered=vUv-.5;float vignette=1.0-.075*dot(centered,centered);color*=vignette;
  gl_FragColor=vec4(color,1.0);
  #include <tonemapping_fragment>
@@ -53,8 +51,12 @@ void main(){
 
 export function createRenderQuality(renderer){
  if(!renderer.isWebGLRenderer)return {render:(scene,camera)=>renderer.render(scene,camera),resize(){},setQuality(){}};
+ let quality='ultra';
+ function displaySize(){
+  renderer.setPixelRatio(renderPixelRatio(innerWidth,innerHeight,devicePixelRatio,quality,renderer.capabilities.maxTextureSize));renderer.setSize(innerWidth,innerHeight);
+ }
  const hdr=renderer.extensions.has('EXT_color_buffer_float');
- if(!hdr)return {render:(scene,camera)=>renderer.render(scene,camera),resize(){},setQuality(value){renderer.setPixelRatio(Math.min(devicePixelRatio,value==='smooth'?1:1.5));renderer.setSize(innerWidth,innerHeight)}};
+ if(!hdr){displaySize();return {render:(scene,camera)=>renderer.render(scene,camera),resize:displaySize,setQuality(value){quality=value;displaySize()}}}
  const target=new T.WebGLRenderTarget(1,1,{type:hdr?T.HalfFloatType:T.UnsignedByteType,minFilter:T.LinearFilter,magFilter:T.LinearFilter,depthBuffer:true});
  target.texture.colorSpace=T.LinearSRGBColorSpace;target.depthTexture=new T.DepthTexture(1,1,T.UnsignedIntType);target.depthTexture.minFilter=target.depthTexture.magFilter=T.NearestFilter;
  const detailSamples=Math.min(innerWidth<760?2:4,renderer.capabilities.maxSamples||0);
@@ -62,9 +64,8 @@ export function createRenderQuality(renderer){
  const uniforms={tColor:{value:target.texture},tDepth:{value:target.depthTexture},resolution:{value:new T.Vector2()},projectionInverse:{value:new T.Matrix4()},projection:{value:new T.Matrix4()},detail:{value:1}};
  const material=new T.ShaderMaterial({vertexShader:qualityVertex,fragmentShader:qualityFragment,uniforms,depthWrite:false,depthTest:false});
  const postScene=new T.Scene(),postCamera=new T.OrthographicCamera(-1,1,1,-1,0,1);postScene.add(new T.Mesh(new T.PlaneGeometry(2,2),material));
- let detailed=true;
- function resize(){const mobile=innerWidth<760,budget=detailed?2800000:1400000;const ratio=Math.min(devicePixelRatio,detailed?(mobile?1.5:2):1.2,Math.sqrt(budget/(innerWidth*innerHeight)));renderer.setPixelRatio(ratio);renderer.setSize(innerWidth,innerHeight);const size=renderer.getDrawingBufferSize(new T.Vector2());target.setSize(size.x,size.y);uniforms.resolution.value.copy(size)}
- function setQuality(value){detailed=value!=='smooth';uniforms.detail.value=detailed?1:0;const samples=detailed?detailSamples:0;if(target.samples!==samples){target.samples=samples;target.dispose()}resize()}
+ function resize(){displaySize();const size=renderer.getDrawingBufferSize(new T.Vector2());target.setSize(size.x,size.y);uniforms.resolution.value.copy(size)}
+ function setQuality(value){quality=value;const detailed=value!=='smooth';uniforms.detail.value=detailed?1:0;const samples=detailed?detailSamples:0;if(target.samples!==samples){target.samples=samples;target.dispose()}resize()}
  resize();
  return {target,uniforms,resize,setQuality,render(scene,camera){
   uniforms.projectionInverse.value.copy(camera.projectionMatrixInverse);uniforms.projection.value.copy(camera.projectionMatrix);
