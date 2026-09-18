@@ -1,0 +1,184 @@
+{
+  "provider": "Poly Haven",
+  "retrieved_date": "2026-09-18",
+  "license": "CC0-1.0",
+  "license_url": "https://polyhaven.com/license",
+  "total_asset_bytes": 15311795,
+  "assets": [
+    {
+      "asset": "kloofendal_overcast_puresky",
+      "map": "hdri",
+      "resolution": "2k",
+      "format": "hdr",
+      "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/kloofendal_overcast_puresky_2k.hdr",
+      "expected_md5": "26462123fc5ce757a331553d05e4db37",
+      "expected_bytes": 4335717,
+      "path": "kloofendal_overcast_puresky_2k.hdr",
+      "source": "https://polyhaven.com/a/kloofendal_overcast_puresky",
+      "author": {
+        "Greg Zaal": "All"
+      },
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "bytes": 4335717,
+      "sha256": "312b1b04b7f10057a4f1418abc59d1166c8933cc93fc72051502edaf8d6b2fcd",
+      "pixel_dimensions": [
+        2048,
+        1024
+      ]
+    },
+    {
+      "asset": "asphalt_02",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "format": "jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02/asphalt_02_diff_1k.jpg",
+      "expected_md5": "fa19772d4817754c3efab708c651f5a8",
+      "expected_bytes": 731707,
+      "path": "asphalt_02_diff_1k.jpg",
+      "source": "https://polyhaven.com/a/asphalt_02",
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "bytes": 731707,
+      "sha256": "1aa5ce99f58a625c71d48cfc3e68b65ca85ccb00f39e045c0a928608a0ea25ed",
+      "pixel_dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "asset": "asphalt_02",
+      "map": "nor_gl",
+      "resolution": "1k",
+      "format": "png",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/1k/asphalt_02/asphalt_02_nor_gl_1k.png",
+      "expected_md5": "910d4b3882858368622eaa1b973bb290",
+      "expected_bytes": 2323825,
+      "path": "asphalt_02_nor_gl_1k.png",
+      "source": "https://polyhaven.com/a/asphalt_02",
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "bytes": 2323825,
+      "sha256": "b2069741070f0107c81d001eabfffd6d6644f249cd4ffdf52852e4b5e746a959",
+      "pixel_dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "asset": "asphalt_02",
+      "map": "Rough",
+      "resolution": "1k",
+      "format": "jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02/asphalt_02_rough_1k.jpg",
+      "expected_md5": "ec80a2929797c1b3ffc121c4f665585a",
+      "expected_bytes": 544032,
+      "path": "asphalt_02_rough_1k.jpg",
+      "source": "https://polyhaven.com/a/asphalt_02",
+      "author": {
+        "Rob Tuytel": "All"
+      },
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "bytes": 544032,
+      "sha256": "70ba3edc65525eb4dc366cf010ca7ae0bd34e0251ff0225c2dad627a873d0712",
+      "pixel_dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "asset": "concrete_pavement",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "format": "jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_pavement/concrete_pavement_diff_1k.jpg",
+      "expected_md5": "b7a0d071a3406d55a1c3e9a73a06df03",
+      "expected_bytes": 926197,
+      "path": "concrete_pavement_diff_1k.jpg",
+      "source": "https://polyhaven.com/a/concrete_pavement",
+      "author": {
+        "Charlotte Baglioni": "All"
+      },
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "bytes": 926197,
+      "sha256": "70d3ff969a7421c7ae057b5d16386d11f5e59c6740db643352e1039413f419c4",
+      "pixel_dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "asset": "concrete_pavement",
+      "map": "nor_gl",
+      "resolution": "1k",
+      "format": "png",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/1k/concrete_pavement/concrete_pavement_nor_gl_1k.png",
+      "expected_md5": "6676e0e60345c2697ff62aedeaaafe4f",
+      "expected_bytes": 5974518,
+      "path": "concrete_pavement_nor_gl_1k.png",
+      "source": "https://polyhaven.com/a/concrete_pavement",
+      "author": {
+        "Charlotte Baglioni": "All"
+      },
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "bytes": 5974518,
+      "sha256": "9800e6b905862cbe4c5729d60d62b1c9dbf8e9cb52a7a468489131c556ec5e7c",
+      "pixel_dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "asset": "concrete_pavement",
+      "map": "Rough",
+      "resolution": "1k",
+      "format": "jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_pavement/concrete_pavement_rough_1k.jpg",
+      "expected_md5": "e5a0fc9831bad12c7b3779179aa706f7",
+      "expected_bytes": 475799,
+      "path": "concrete_pavement_rough_1k.jpg",
+      "source": "https://polyhaven.com/a/concrete_pavement",
+      "author": {
+        "Charlotte Baglioni": "All"
+      },
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "bytes": 475799,
+      "sha256": "99f81099af07b009134b6a81bf0f95ab16da09c57156cc2ed534975664a68533",
+      "pixel_dimensions": [
+        1024,
+        1024
+      ]
+    }
+  ],
+  "scales_m": {
+    "asphalt_02": [
+      3.0,
+      3.0
+    ],
+    "concrete_pavement": [
+      1.8,
+      1.8
+    ]
+  },
+  "environment": {
+    "asset": "kloofendal_overcast_puresky",
+    "whitebalance_kelvin": 5303,
+    "dynamic_range_evs": 6,
+    "notes": "Photographic sky-only edit, soft overcast afternoon daylight, open sky and no buildings."
+  },
+  "notes": {
+    "asphalt_02": "Photographic weathered gray asphalt with coarse aggregate and fine cracks.",
+    "concrete_pavement": "Photographic warm gray-beige rectangular concrete paving with fine joints and sandy aggregate.",
+    "integration": "Use Diffuse as the color map with sRGB decoding; OpenGL normals and grayscale roughness are non-color data. Apply each full square texture over its listed physical dimensions."
+  }
+}
