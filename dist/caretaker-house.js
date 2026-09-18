@@ -6,7 +6,7 @@ import {surface} from './surface-materials.js';
 // The original footprint, floor elevation, roof and connection are retained.
 export const caretaker={...garage,entry:{x:garage.x1-.1875,z:18.15},connection:{x:-3.27627,z:15.691466},partitionX:-8.85};
 const rect=(x0,z0,x1,z1)=>[[x0,z0],[x1,z0],[x1,z1],[x0,z1]];
-function outsideRectangle(poly,r){
+export function outsideRectangle(poly,r){
  let remaining=poly;const result=[];
  for(const [axis,limit,sign] of [[0,r.x0,1],[0,r.x1,-1],[1,r.z0,1],[1,r.z1,-1]]){
   const inside=[],outside=[];

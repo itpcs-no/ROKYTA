@@ -1,3 +1,4 @@
+import {applyPoolApartment,buildPoolApartment,apartmentBarrierAt} from './pool-apartment.js';
 import {applyCaretakerLayout,buildCaretakerInterior,caretaker,caretakerBarrierAt} from './caretaker-house.js';
 import {createDriving} from './driving.js';
 import {prepareCarAssets} from './parked-cars.js';
@@ -24,7 +25,7 @@ const $=id=>document.getElementById(id), view=$('view');
 try{await start()}catch(e){$('loading').style.display='block';$('loading').textContent='Model sa nepodarilo načítať. Skús obnoviť stránku v prehliadači s podporou WebGL.';console.error(e)}
 async function start(){
 const [data]=await Promise.all([fetch('./assets/model.json').then(r=>{if(!r.ok)throw Error('model');return r.json()}),prepareCarAssets()]);
-data.forEach((level,i)=>level.base=levels[i]);applyCaretakerLayout(data);
+data.forEach((level,i)=>level.base=levels[i]);applyCaretakerLayout(data);applyPoolApartment(data);
 const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;renderer.setClearColor(0xdce6eb);view.append(renderer.domElement);renderer.outputColorSpace=T.SRGBColorSpace;
 const scene=new T.Scene();const camera=new T.PerspectiveCamera(48,innerWidth/innerHeight,.35,1600);const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.maxDistance=150;controls.minDistance=2;controls.maxPolarAngle=Math.PI*.49;controls.target.set(0,3,-3);
 const daylight=addDaylight(scene,renderer);const renderQuality=createRenderQuality(renderer);let atmosphereTime=0;
@@ -78,6 +79,7 @@ for(let f=0;f<4;f++){
   if(i)subtractTopSurfaces(slab,footprints[f].slice(0,i).map(([x0,z0,x1,z1])=>rectOutline({x0,z0,x1,z1})),true);
   floorMeshes[f].push(slab);
  }
+ if(f===0)group.add(buildPoolApartment());
  if(f===1)group.add(buildCaretakerInterior());
  const geo=new T.PlaneGeometry(62,52);geo.rotateX(-Math.PI/2);const plan=new T.Mesh(geo,new T.MeshBasicMaterial({map:texture,transparent:true,opacity:.94,depthWrite:false}));plan.position.set(.175,.016,0);plan.visible=false;group.add(plan);group.userData.plan=plan;
 }
@@ -93,6 +95,8 @@ function orbitHome(top=false){driving.leave();jumpOffset=jumpVelocity=0;mode='or
 function walkAt(x=2.3,z=-4.1,outside=false){if(selected==='all'&&!outside){selected=1;$('floor').value='1';visibility()}driving.leave();jumpOffset=jumpVelocity=0;mode='walk';camera.near=.12;camera.updateProjectionMatrix();controls.enabled=false;nav.set(x,(selected==='all'?0:data[selected].base)+1.65,z);camera.position.copy(nav);yaw=0;pitch=$('figure').checked?-.45:0;camera.rotation.order='YXZ';camera.rotation.set(0,0,0);$('hint').textContent='WASD / šípky: pohyb · ťahanie myšou: pohľad do strán aj hore/dole · koliesko: vzdialenosť · medzerník: skok · E: nastúpiť/vystúpiť · Shift: beh · Esc: obhliadka. Podlažie zmeníš hore; klik do mapy ťa premiestni.';visibility();status();$('panel').classList.remove('open')}
 $('figure').onchange=()=>{pitch=$('figure').checked?-.45:0;status()};$('startWalk').onclick=()=>mode==='walk'?orbitHome():selected==='all'?walkAt(5,-31,true):walkAt();
 $('floor').onchange=()=>{selected=$('floor').value==='all'?'all':Number($('floor').value);$('cutaway').checked=false;visibility();if(mode==='walk'){if(selected==='all')walkAt(5,-31,true);else walkAt(selected===3?1:2.3,selected===3?-5:-4.1)}else orbitHome()};$('orbit').onclick=()=>orbitHome();$('walk').onclick=()=>selected==='all'?walkAt(5,-31,true):walkAt();$('top').onclick=()=>orbitHome(true);$('reset').onclick=()=>orbitHome();$('plan').onchange=visibility;$('cutaway').onchange=visibility;$('panelToggle').onclick=()=>$('panel').classList.toggle('open');
+$('apartmentView').onclick=()=>{selected=0;$('floor').value='0';$('cutaway').checked=true;$('plan').checked=false;orbitHome();controls.target.set(-12.3,0,-16.2);camera.position.set(-13,24,-.5);controls.update();$('panel').classList.remove('open')};
+$('apartmentWalk').onclick=()=>{selected=0;$('floor').value='0';$('cutaway').checked=false;$('plan').checked=false;walkAt(-18.6,-14.3);yaw=-Math.PI/2;pitch=-.25};
 $('poolView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();const target=new T.Vector3(wellnessTarget.x,wellnessTarget.y,wellnessTarget.z),direction=new T.Vector3(-.85,1.2,-1).normalize(),distance=Math.max(39,15/Math.sin(Math.atan(Math.tan(camera.fov*Math.PI/360)*Math.min(camera.aspect,1))));controls.target.copy(target);camera.position.copy(target).addScaledVector(direction,distance);controls.maxDistance=Math.max(150,distance*1.2);controls.update();$('panel').classList.remove('open')};
 $('poolWalk').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(wellnessEntry.x,wellnessEntry.z,true);yaw=0;pitch=-.4};
 $('caretakerWalk').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(caretaker.x1+1.3,caretaker.entry.z,true);yaw=Math.PI/2;pitch=-.28};
@@ -138,7 +142,7 @@ function canMove(x,z){
  if(selected==='all'&&homeBarrierAt(x,z,$('doors').checked))return false;
  if(selected==='all'&&siteBarrierAt(x,z,$('gate').checked,$('secondaryGate').checked))return false;
  const floor=selected==='all'?(nav.y-1.65>2.5?1:0):selected;
- if(caretakerBarrierAt(x,z,nav.y-1.65))return false;
+ if(caretakerBarrierAt(x,z,nav.y-1.65)||apartmentBarrierAt(x,z,nav.y-1.65))return false;
  if(selected!=='all'){
   let supported=footprints[floor].some(([a,b,c,d])=>x>=a+.15&&x<=c-.15&&z>=b+.15&&z<=d-.15);
   if(floor===2)supported ||= inside(x,z,exterior.userData.deckOutline);
