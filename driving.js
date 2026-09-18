@@ -19,13 +19,14 @@ export function createDriving(cars,height,canMove){
  }
  return {get active(){return active},get speed(){return speed},
   nearest(p){return cars.children.filter(c=>Math.hypot(c.position.x-p.x,c.position.z-p.z)<4&&Math.abs(p.y-c.position.y-1.65)<1.2).sort((a,b)=>a.position.distanceTo(p)-b.position.distanceTo(p))[0]},
-  enter(car){active=car;speed=0},leave(){active=null;speed=0},
+  enter(car){active=car;speed=0},leave(){active?.userData.updateVehicle?.(0,0,false,1);active=null;speed=0},
   update(dt,throttle,steer,brake){if(!active)return;
    speed=T.MathUtils.clamp(speed+throttle*5*dt,-3,8);
    if(!throttle||brake)speed=T.MathUtils.damp(speed,0,brake?12:2,dt);
    const angle=active.rotation.y+steer*speed*.28*dt;
    const x=active.position.x-Math.sin(angle)*speed*dt,z=active.position.z-Math.cos(angle)*speed*dt;
    if(allowed(x,z,angle)&&Math.abs(height(x,z)-active.position.y)<.2){active.position.set(x,height(x,z),z);active.rotation.y=angle}else speed=0;
+   active.userData.updateVehicle?.(speed*dt,steer,brake,dt);
   }
  };
 }
