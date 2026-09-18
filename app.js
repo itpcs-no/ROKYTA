@@ -1,3 +1,4 @@
+import {applyCaretakerLayout,buildCaretakerInterior,caretaker,caretakerBarrierAt} from './caretaker-house.js';
 import {createDriving} from './driving.js';
 import {surface,glassMaterial,finishSurfaces,updateSurfaceTime,waitForSurfaceImages} from './surface-materials.js';
 import {addDaylight} from './daylight.js';
@@ -21,7 +22,7 @@ const $=id=>document.getElementById(id), view=$('view');
 try{await start()}catch(e){$('loading').style.display='block';$('loading').textContent='Model sa nepodarilo načítať. Skús obnoviť stránku v prehliadači s podporou WebGL.';console.error(e)}
 async function start(){
 const data=await fetch('./assets/model.json').then(r=>{if(!r.ok)throw Error('model');return r.json()});
-data.forEach((level,i)=>level.base=levels[i]);
+data.forEach((level,i)=>level.base=levels[i]);applyCaretakerLayout(data);
 const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.setClearColor(0xdce6eb);view.append(renderer.domElement);renderer.outputColorSpace=T.SRGBColorSpace;
 const scene=new T.Scene();const camera=new T.PerspectiveCamera(48,innerWidth/innerHeight,.35,1600);const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.maxDistance=150;controls.minDistance=2;controls.maxPolarAngle=Math.PI*.49;controls.target.set(0,3,-3);
 const daylight=addDaylight(scene,renderer);const renderQuality=createRenderQuality(renderer);let atmosphereTime=0;
@@ -40,7 +41,7 @@ for(let f=0;f<4;f++){
  for(const d of data[f].doors||[]){
   const [hx,hz]=d.hinge,[cx,cz]=d.closed,[ox,oz]=d.open;
   const closed=-Math.atan2(cz-hz,cx-hx),opened=-Math.atan2(oz-hz,ox-hx),height=d.height;
-  const pivot=new T.Group();pivot.position.set(hx,0,hz);pivot.rotation.y=opened;group.add(pivot);pivot.userData={closed,opened,floor:f};doorPivots.push(pivot);
+  const pivot=new T.Group();pivot.position.set(hx,0,hz);pivot.rotation.y=opened;group.add(pivot);pivot.name=d.name||'';pivot.userData={closed,opened,floor:f};doorPivots.push(pivot);
   box(pivot,d.width/2,height/2,0,Math.max(.1,d.width-.035),height-.025,.038,doorMat);
   box(pivot,d.width-.12,1.02,.045,.1,.025,.035,handleMat);box(pivot,d.width-.12,1.02,-.045,.1,.025,.035,handleMat);
   const frame=new T.Group();frame.position.set(hx,0,hz);frame.rotation.y=closed;group.add(frame);
@@ -48,18 +49,18 @@ for(let f=0;f<4;f++){
   box(frame,d.width/2,height+.025,0,d.width+.095,.055,.12,jambMat);
   const lintelHeight=(data[f].wallHeight||2.55)-height-.06;if(lintelHeight>0)box(frame,d.width/2,height+.06+lintelHeight/2,0,d.width,lintelHeight,.12,mat);
  }
- for(const w of data[f].windows){const [x,z,dx,dz]=w;const cx=x+dx/2,cz=z+dz/2;const horizontal=dx>dz,start=horizontal?x:z,end=start+(horizontal?dx:dz);let panes=[[start,end]];
+ for(const w of data[f].windows){const [x,z,dx,dz]=w,bottom=w[4]??.1,windowHeight=w[5]??2.1,windowTop=bottom+windowHeight;const cx=x+dx/2,cz=z+dz/2;const horizontal=dx>dz,start=horizontal?x:z,end=start+(horizontal?dx:dz);let panes=[[start,end]];
  for(const d of data[f].doors||[]){const a=d.hinge,b=d.closed;const along=horizontal?Math.abs(a[1]-b[1])<.02:Math.abs(a[0]-b[0])<.02;const near=horizontal?Math.abs(a[1]-cz)<.5:Math.abs(a[0]-cx)<.5;if(!along||!near)continue;const da=Math.min(a[horizontal?0:1],b[horizontal?0:1])-.025,db=Math.max(a[horizontal?0:1],b[horizontal?0:1])+.025;panes=panes.flatMap(([l,r])=>db<=l||da>=r?[[l,r]]:[[l,Math.max(l,da)],[Math.min(r,db),r]].filter(([a,b])=>b-a>.025))}
  for(const [l,r] of panes){
   const pcx=horizontal?(l+r)/2:cx,pcz=horizontal?cz:(l+r)/2,pw=horizontal?r-l:dx,pd=horizontal?dz:r-l;
-  box(group,pcx,1.15,pcz,horizontal?r-l:.045,2.1,horizontal?.045:r-l,glassMat);
-  box(group,pcx,.05,pcz,pw,.1,pd,mat);
-  const head=(data[f].wallHeight||2.55)-2.2;box(group,pcx,2.2+head/2,pcz,pw,head+.006,pd,mat);
-  for(const y of [.12,2.18])box(group,pcx,y,pcz,horizontal?r-l:.065,.045,horizontal?.065:r-l,frameMat);
-  for(const edge of [l+.022,r-.022])box(group,horizontal?edge:cx,1.15,horizontal?cz:edge,horizontal?.045:.065,2.1,horizontal?.065:.045,frameMat);
-  if(r-l>2.6)box(group,pcx,1.15,pcz,horizontal?.045:.08,2.1,horizontal?.08:.045,frameMat);
+  box(group,pcx,bottom+windowHeight/2,pcz,horizontal?r-l:.045,windowHeight,horizontal?.045:r-l,glassMat);
+  box(group,pcx,bottom/2,pcz,pw,bottom,pd,mat);
+  const head=(data[f].wallHeight||2.55)-windowTop;box(group,pcx,windowTop+head/2,pcz,pw,head+.006,pd,mat);
+  for(const y of [bottom+.0225,windowTop-.0225])box(group,pcx,y,pcz,horizontal?r-l:.065,.045,horizontal?.065:r-l,frameMat);
+  for(const edge of [l+.022,r-.022])box(group,horizontal?edge:cx,bottom+windowHeight/2,horizontal?cz:edge,horizontal?.045:.065,windowHeight,horizontal?.065:.045,frameMat);
+  if(r-l>2.6)box(group,pcx,bottom+windowHeight/2,pcz,horizontal?.045:.08,windowHeight,horizontal?.08:.045,frameMat);
   const occupied=(xx,zz)=>footprints[f].some(([a,b,c,d])=>xx>a&&xx<c&&zz>b&&zz<d),positive=occupied(pcx+(horizontal?0:.5),pcz+(horizontal?.5:0)),negative=occupied(pcx-(horizontal?0:.5),pcz-(horizontal?.5:0));
-  if(positive!==negative){const sign=positive?-1:1;box(group,pcx+(horizontal?0:sign*.1),.083,pcz+(horizontal?sign*.1:0),horizontal?r-l+.10:.28,.036,horizontal?.28:r-l+.10,jambMat);}
+  if(positive!==negative){const sign=positive?-1:1;box(group,pcx+(horizontal?0:sign*.1),bottom-.017,pcz+(horizontal?sign*.1:0),horizontal?r-l+.10:.28,.036,horizontal?.28:r-l+.10,jambMat);}
   if(positive!==negative&&f>0&&f<3&&r-l>1.5&&Math.abs(Math.round(l*2))%3!==0){const sign=positive?-1:1,width=Math.min(.62,(r-l)*.23);
    for(const start of [l+.05,r-.05-width]){const points=[],indices=[];for(let i=0;i<=12;i++){const along=start+width*i/12,fold=Math.cos(i*Math.PI)*.024,across=(horizontal?pcz:pcx)-sign*(.16+fold);points.push(horizontal?along:across,.22,horizontal?across:along,horizontal?along:across,2.14,horizontal?across:along);if(i){const a=(i-1)*2;indices.push(a,a+2,a+1,a+1,a+2,a+3)}}const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(points,3));geometry.setIndex(indices);geometry.computeVertexNormals();const curtain=new T.Mesh(geometry,curtainMat);curtain.castShadow=true;curtain.receiveShadow=true;group.add(curtain)}
   }
@@ -70,15 +71,16 @@ for(let f=0;f<4;f++){
 
  // The former indoor pool is closed with the same continuous ground-floor slab.
  for(const [i,[x,z,x1,z1]] of footprints[f].entries()){
-  const slab=box(group,(x+x1)/2,-slabThickness/2,(z+z1)/2,x1-x,slabThickness,z1-z,slabMat);
+  const slab=box(group,(x+x1)/2,-slabThickness/2,(z+z1)/2,x1-x,slabThickness,z1-z,f===1&&i===3?surface('wood'):slabMat);
   if(i)subtractTopSurfaces(slab,footprints[f].slice(0,i).map(([x0,z0,x1,z1])=>rectOutline({x0,z0,x1,z1})),true);
   floorMeshes[f].push(slab);
  }
+ if(f===1)group.add(buildCaretakerInterior());
  const geo=new T.PlaneGeometry(62,52);geo.rotateX(-Math.PI/2);const plan=new T.Mesh(geo,new T.MeshBasicMaterial({map:texture,transparent:true,opacity:.94,depthWrite:false}));plan.position.set(.175,.016,0);plan.visible=false;group.add(plan);group.userData.plan=plan;
 }
 const walker=createWalker();scene.add(walker.root);walker.root.visible=false;const nav=new T.Vector3();let walkingTime=0,jumpOffset=0,jumpVelocity=0;
 let selected='all', mode='orbit', yaw=0,pitch=-.45,walkDistance=5.5,keys={},drag=null;const clock=new T.Clock();
-function setDoors(){renderer.shadowMap.needsUpdate=true;const shutter=exterior.userData.garageDoor;shutter.scale.y=$('doors').checked?.045:1;shutter.position.y=(garage.floor+garage.doorHeight)*(1-shutter.scale.y);doorPivots.forEach(p=>p.rotation.y=$('doors').checked?p.userData.opened:p.userData.closed);exterior.userData.parkingStorage.userData.setDoors($('doors').checked);exterior.userData.homes.userData.setDoors($('doors').checked)}
+function setDoors(){renderer.shadowMap.needsUpdate=true;doorPivots.forEach(p=>p.rotation.y=$('doors').checked?p.userData.opened:p.userData.closed);exterior.userData.parkingStorage.userData.setDoors($('doors').checked);exterior.userData.homes.userData.setDoors($('doors').checked)}
 $('doors').onchange=setDoors;
 $('gate').onchange=()=>{exterior.userData.site.userData.setGate($('gate').checked);renderer.shadowMap.needsUpdate=true};
 function status(){walker.root.visible=mode==='walk'&&!driving.active&&$('figure').checked;$('startWalk').textContent=mode==='walk'?'Ukončiť prechádzku':'Prejsť sa s panáčikom';$('status').textContent=`${selected==='all'?'Celá budova':`${selected+1}. NP`} · ${mode==='walk'?'WASD · pohyb':'obhliadka'}`;$('orbit').classList.toggle('active',mode==='orbit');$('walk').classList.toggle('active',mode==='walk');document.body.classList.toggle('walking',mode==='walk')}
@@ -89,6 +91,7 @@ $('figure').onchange=()=>{pitch=$('figure').checked?-.45:0;status()};$('startWal
 $('floor').onchange=()=>{selected=$('floor').value==='all'?'all':Number($('floor').value);$('cutaway').checked=false;visibility();if(mode==='walk'){if(selected==='all')walkAt(5,-31,true);else walkAt(selected===3?1:2.3,selected===3?-5:-4.1)}else orbitHome()};$('orbit').onclick=()=>orbitHome();$('walk').onclick=()=>selected==='all'?walkAt(5,-31,true):walkAt();$('top').onclick=()=>orbitHome(true);$('reset').onclick=()=>orbitHome();$('plan').onchange=visibility;$('cutaway').onchange=visibility;$('panelToggle').onclick=()=>$('panel').classList.toggle('open');
 $('poolView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();const target=new T.Vector3(wellnessTarget.x,wellnessTarget.y,wellnessTarget.z),direction=new T.Vector3(-.85,1.2,-1).normalize(),distance=Math.max(39,15/Math.sin(Math.atan(Math.tan(camera.fov*Math.PI/360)*Math.min(camera.aspect,1))));controls.target.copy(target);camera.position.copy(target).addScaledVector(direction,distance);controls.maxDistance=Math.max(150,distance*1.2);controls.update();$('panel').classList.remove('open')};
 $('poolWalk').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(wellnessEntry.x,wellnessEntry.z,true);yaw=0;pitch=-.4};
+$('caretakerWalk').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(caretaker.x1+1.3,caretaker.entry.z,true);yaw=Math.PI/2;pitch=-.28};
 $('garageView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;visibility();orbitHome();camera.position.set(20,10,35);controls.target.set(-4,3,20);controls.update()};
 $('courtsView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();const direction=new T.Vector3(56,35.4,-38).normalize(),right=new T.Vector3().crossVectors(new T.Vector3(0,1,0),direction).normalize(),distance=Math.max(85,40/Math.sin(Math.atan(Math.tan(camera.fov*Math.PI/360)*Math.min(camera.aspect,1))));controls.target.set(-17,8.6,62);camera.position.copy(controls.target).addScaledVector(direction,distance);controls.maxDistance=Math.max(150,distance*1.2);controls.update()};
 $('courtsWalk').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(courtSite.stairs.x,49,true);yaw=Math.PI;pitch=-.25};
@@ -129,7 +132,7 @@ function canMove(x,z){
  if(selected==='all'&&homeBarrierAt(x,z,$('doors').checked))return false;
  if(selected==='all'&&siteBarrierAt(x,z,$('gate').checked))return false;
  const floor=selected==='all'?(nav.y-1.65>2.5?1:0):selected;
- if(selected==='all'&&!$('doors').checked&&Math.abs(x-garage.x1)<.2&&z>garage.doorZ0&&z<garage.doorZ1)return false;
+ if(caretakerBarrierAt(x,z,nav.y-1.65))return false;
  if(selected!=='all'){
   let supported=footprints[floor].some(([a,b,c,d])=>x>=a+.15&&x<=c-.15&&z>=b+.15&&z<=d-.15);
   if(floor===2)supported ||= inside(x,z,exterior.userData.deckOutline);
@@ -194,7 +197,7 @@ function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMa
    camera.lookAt(nav.x,targetY,nav.z);keepCoveredCamera(eyeY);
   }else{camera.position.set(nav.x,eyeY,nav.z);camera.rotation.set(pitch,yaw,0,'YXZ')}
   const insideHome=selected==='all'&&homeAt(nav.x,nav.z),indoors=!!insideHome||selected!=='all'||footprints[0].some(([a,b,c,d])=>nav.x>a&&nav.x<c&&nav.z>b&&nav.z<d);
-  renderer.clippingPlanes=$('cutaway').checked?[new T.Plane(new T.Vector3(0,-1,0),2.55)]:indoors&&$('figure').checked?[new T.Plane(new T.Vector3(0,-1,0),(insideHome?homesLevel:selected==='all'?0:levels[selected])+2.3)]:[];
+  renderer.clippingPlanes=$('cutaway').checked?[new T.Plane(new T.Vector3(0,-1,0),2.55)]:indoors&&$('figure').checked?[new T.Plane(new T.Vector3(0,-1,0),(insideHome?homesLevel:selected==='all'?nav.y-1.65:levels[selected])+2.3)]:[];
   renderer.shadowMap.needsUpdate=true;
  }else controls.update();
  renderQuality.render(scene,camera);
