@@ -1,9 +1,9 @@
-import {sitePavedHeight,siteShoulderHeight} from './site-layout.js';
+import {sitePavedHeight,siteShoulderHeight,secondaryAccess} from './site-layout.js';
 import {caretakerGardenHeight,gardenBlend,sideApproach} from './caretaker-access-layout.js';
 
 // Grassy replacement for the long eastern retaining wall shown by the owner.
 // Its rounded front stays beside the cellars, outside every doorway and apron.
-export const gardenBank={edgeX:34.5,width:7,front:-2.5,roundLength:4.2,rear:24.4,end:28,top:2.55};
+export const gardenBank={edgeX:34.5,width:secondaryAccess.x-secondaryAccess.width/2-34.5,front:-2.5,roundLength:4.2,rear:24.4,end:28,top:2.55};
 const p=gardenBank,clamp=t=>Math.max(0,Math.min(1,t)),smooth=t=>{const u=clamp(t);return u*u*(3-2*u)};
 export function gardenBankWidth(z){const t=clamp((z-p.front)/p.roundLength);return p.width*Math.sqrt(Math.max(0,1-(1-t)*(1-t)))}
 export function gardenBankBase(x,z,roadLevel){return sitePavedHeight(x,z,roadLevel)??siteShoulderHeight(x,z,roadLevel)??-.06}
