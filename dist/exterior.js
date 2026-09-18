@@ -15,7 +15,7 @@ import {buildArchitectureFinish} from './architecture-finish.js';
 import {wellnessOutline,wellnessBeds} from './wellness-layout.js';
 import {courtSite,courtTerrainBounds,courtTerrainHeight} from './court-layout.js';
 import {subtractTopSurfaces,rectOutline,gradedSolid} from './surface-geometry.js';
-import {garage,ramp,levels,slabThickness,footprints,gardenStairs,gardenPaths,gardenPavedAreas,gardenInfill,gardenInfillHeight,access,rampHeight,accessHeight} from './project-geometry.js';
+import {garage,ramp,levels,slabThickness,footprints,gardenStairs,gardenPaths,gardenPavedAreas,gardenInfill,gardenInfillHeight,gardenCornerJoin,gardenCornerJoinHeight,access,rampHeight,accessHeight} from './project-geometry.js';
 // Visual reconstruction of the 1 August 2018 references, fitted to the PDF footprint.
 // Facade opening rhythm and terrain are estimates, not measured survey geometry.
 export function buildExterior(){
@@ -121,6 +121,7 @@ export function buildExterior(){
   const path=box(root,x,top-.09,z,width,.18,length,paving);path.name='Ground-supported footpath';
  }
  root.add(gradedSolid(gardenInfill,gardenInfillHeight,lawn,'Doplnený terén medzi záhradou a chodníkom'));
+ root.add(gradedSolid(gardenCornerJoin,gardenCornerJoinHeight,paving,'Spojenie chodníka s príjazdom pri odkvape'));
  box(root,-33,1.3,10.6,.22,2.6,26,white);
  root.add(buildGardenBank(ramp.bottom));
  const planting=createPlanting();

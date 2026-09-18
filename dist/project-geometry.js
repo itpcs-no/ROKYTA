@@ -33,6 +33,13 @@ export const gardenPaths=[
  // Close the open corner between the cross path and the caretaker facade.
  {x0:-13.5,x1:-9.25,z0:access.pathEnd,z1:garage.z0}
 ];
+// Close the exposed pocket beside the eastern downpipe. Both ends use the
+// actual neighboring surface heights, so the paving joins without a ledge.
+export const gardenCornerJoin={x0:footprints[0][2][2],x1:gardenStairs.flights[1].x1,z0:access.pathEnd,z1:ramp.z0};
+export function gardenCornerJoinHeight(x,z){
+ const p=gardenCornerJoin,t=Math.max(0,Math.min(1,(z-p.z0)/(p.z1-p.z0)));
+ return gardenStairs.top+(rampHeight(x)-gardenStairs.top)*t;
+}
 // The long gap between the west lawn and its supported path starts behind
 // the cellar back wall. The fill must not occupy any of the storage rooms.
 export const gardenInfill={x0:-13.5,x1:-11.35,z0:1.5,z1:12.025,lawn:2.55,path:gardenStairs.top};
@@ -42,7 +49,7 @@ export function gardenInfillHeight(x,z){
  return r.lawn+(r.path-r.lawn)*Math.max(0,Math.min(1,(x-r.x0)/(r.x1-r.x0)));
 }
 // Shared footprints keep paving, its turf cutouts and road shoulders aligned.
-export const gardenPavedAreas=[...gardenPaths,
+export const gardenPavedAreas=[...gardenPaths,gardenCornerJoin,
  {x0:-32.5,x1:-13.5,z0:20.4,z1:24.4},sideApproach,
  ...[[-32.5,-13.5],[15.5,34.5]].map(([x0,x1])=>({x0,x1,z0:12.05,z1:13.55})),
  ...[-24,26].map(x=>({x0:x-2.25,x1:x+2.25,z0:13,z1:17}))
@@ -67,6 +74,7 @@ export function exteriorHeight(x,z,referenceHeight){
  // the first treads to ground level and make the walker sink through them.
  if(z>=gardenStairs.z0&&z<gardenStairs.z1&&gardenStairs.flights.some(f=>x>=f.x0&&x<=f.x1))y=gardenStairHeight(z);
  if(gardenPaths.some(p=>x>=p.x0&&x<=p.x1&&z>=p.z0&&z<=p.z1))y=gardenStairs.top;
+ const join=gardenCornerJoin;if(x>=join.x0&&x<=join.x1&&z>=join.z0&&z<=join.z1)y=gardenCornerJoinHeight(x,z);
  const infill=gardenInfillHeight(x,z);if(infill!==null)y=infill;
  // Distinguish the ground floor from the grass roof at the same x/z position.
  if(parkingBlockAt(x,z)&&(referenceHeight===undefined||referenceHeight<parkingCeilingHeight(x,z,ramp.bottom)+.1))y=parkingFloorHeight(x,z,ramp.bottom);
