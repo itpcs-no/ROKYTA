@@ -6,11 +6,11 @@ export function createPlanting(){
  let seed=9137;const rnd=()=>{seed=(1664525*seed+1013904223)>>>0;return seed/4294967296};
  const leaves=[],branches=[],grasses=[],dummy=new T.Object3D(),up=new T.Vector3(0,1,0);
  const leafGeo=new T.BufferGeometry();
- leafGeo.setAttribute('position',new T.Float32BufferAttribute([0,.02,0, 0,0,-1, .42,0,-.52, .5,0,.12, .28,0,.68, 0,0,1, -.28,0,.68, -.5,0,.12, -.42,0,-.52],3));
+ leafGeo.setAttribute('position',new T.Float32BufferAttribute([0,.11,0, 0,0,-1, .42,-.06,-.52, .5,-.035,.12, .28,.02,.68, 0,.16,1, -.28,.02,.68, -.5,-.035,.12, -.42,-.06,-.52],3));
  leafGeo.setIndex([0,1,2,0,2,3,0,3,4,0,4,5,0,5,6,0,6,7,0,7,8,0,8,1]);leafGeo.computeVertexNormals();
  const leafPositions=leafGeo.attributes.position;leafGeo.setAttribute('uv',new T.Float32BufferAttribute(Array.from({length:leafPositions.count},(_,i)=>[leafPositions.getX(i)+.5,(leafPositions.getZ(i)+1)/2]).flat(),2));
  const branch=(a,b,r0,r1)=>{const direction=new T.Vector3().subVectors(b,a);dummy.position.copy(a).add(b).multiplyScalar(.5);dummy.quaternion.setFromUnitVectors(up,direction.clone().normalize());dummy.scale.set(r0,direction.length(),r0);dummy.updateMatrix();branches.push({matrix:dummy.matrix.clone(),ratio:r1/r0})};
- function leaf(x,y,z,size,tone){dummy.position.set(x,y,z);dummy.rotation.set(rnd()*Math.PI,(rnd()-.5)*6.28,(rnd()-.5)*2);dummy.scale.set(size*(.65+rnd()*.3),size,size);dummy.updateMatrix();leaves.push({matrix:dummy.matrix.clone(),color:new T.Color().setHSL(.21+rnd()*.065,.24+rnd()*.18,tone+rnd()*.09)})}
+ function leaf(x,y,z,size,tone){dummy.position.set(x,y,z);dummy.rotation.set((rnd()-.5)*1.8,(rnd()-.5)*6.28,(rnd()-.5)*1.6);dummy.scale.set(size*(.65+rnd()*.3),size,size);dummy.updateMatrix();leaves.push({matrix:dummy.matrix.clone(),color:new T.Color().setHSL(.225+rnd()*.055,.43+rnd()*.2,tone*.79+rnd()*.075)})}
  function cluster(x,y,z,rx,ry,rz,count,tone,leafScale=1){
   for(let i=0;i<count;i++){const angle=rnd()*Math.PI*2,v=rnd()*2-1,rad=Math.cbrt(rnd()),ring=Math.sqrt(1-v*v);leaf(x+Math.cos(angle)*ring*rad*rx,y+v*rad*ry,z+Math.sin(angle)*ring*rad*rz,(.09+rnd()*.11)*leafScale,tone)}
  }
@@ -33,7 +33,7 @@ export function createPlanting(){
   for(let i=0;i<24;i++){dummy.position.set(x+(rnd()-.5)*size,y,z+(rnd()-.5)*size);dummy.rotation.set((rnd()-.5)*.35,rnd()*6.28,(rnd()-.5)*.5);dummy.scale.set(.015+rnd()*.025,size*(.65+rnd()),1);dummy.updateMatrix();grasses.push(dummy.matrix.clone())}
  }
  function finish(){
-  const foliage=new T.MeshStandardMaterial({color:0xffffff,roughness:.88,side:T.DoubleSide});foliage.name='Individual leaf surfaces';
+  const foliage=new T.MeshStandardMaterial({color:0xffffff,roughness:.7,side:T.DoubleSide});foliage.name='Individual leaf surfaces';
   foliage.onBeforeCompile=shader=>{
    shader.uniforms.surfaceTime=surfaceTime;
    shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nuniform float surfaceTime;varying vec2 vLeafUV;').replace('#include <begin_vertex>',`#include <begin_vertex>
@@ -42,10 +42,10 @@ export function createPlanting(){
    shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vLeafUV;').replace('#include <color_fragment>',`#include <color_fragment>
     float midrib=1.0-smoothstep(.009,.021,abs(vLeafUV.x-.5));
     float veins=pow(.5+.5*cos(vLeafUV.y*69.0+abs(vLeafUV.x-.5)*23.0),16.0);
-    diffuseColor.rgb*=.78+.22*sin(vLeafUV.y*3.14159);
+    diffuseColor.rgb*=.84+.16*sin(vLeafUV.y*3.14159);
     diffuseColor.rgb*=1.0+.08*midrib+.035*veins;
-   `).replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance+=diffuseColor.rgb*(gl_FrontFacing?.025:.07);');
-  };foliage.customProgramCacheKey=()=> 'rokyta-leaf-2';
+   `).replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance+=diffuseColor.rgb*vec3(.74,1.0,.45)*(gl_FrontFacing?.045:.16);');
+  };foliage.customProgramCacheKey=()=> 'rokyta-leaf-3';
   const crowns=new T.InstancedMesh(leafGeo,foliage,leaves.length);crowns.name='Instanced leaves';leaves.forEach((l,i)=>{crowns.setMatrixAt(i,l.matrix);crowns.setColorAt(i,l.color)});crowns.castShadow=true;crowns.receiveShadow=true;crowns.computeBoundingSphere();group.add(crowns);
   const branchGeo=new T.CylinderGeometry(.46,1,1,8);const trunks=new T.InstancedMesh(branchGeo,surface('bark'),branches.length);branches.forEach((b,i)=>trunks.setMatrixAt(i,b.matrix));trunks.castShadow=true;trunks.receiveShadow=true;trunks.computeBoundingSphere();group.add(trunks);
   if(grasses.length){const blade=new T.BufferGeometry();blade.setAttribute('position',new T.Float32BufferAttribute([-.5,0,0,.5,0,0,.18,.55,.07,0,1,.2],3));blade.setIndex([0,1,2,0,2,3]);blade.computeVertexNormals();const m=new T.MeshStandardMaterial({color:0x69764d,roughness:1,side:T.DoubleSide});const tufts=new T.InstancedMesh(blade,m,grasses.length);grasses.forEach((a,i)=>tufts.setMatrixAt(i,a));tufts.receiveShadow=true;tufts.computeBoundingSphere();group.add(tufts)}

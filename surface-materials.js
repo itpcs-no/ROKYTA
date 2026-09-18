@@ -6,8 +6,14 @@ const cache=new Map();
 export const surfaceTime={value:0};
 export function updateSurfaceTime(time){surfaceTime.value=time}
 const rasterSurfaces={grass:['lawn-albedo.png',1.65],wood:['oak-albedo.png',1.4],plaster:['plaster-albedo.png',1.2]};
+const photographicSurfaces={asphalt:{asset:'asphalt_02',size:3,normal:.6},paving:{asset:'concrete_pavement',size:1.8,normal:.5}};
 const surfaceJobs=[];
 export function waitForSurfaceImages(){return Promise.allSettled(surfaceJobs)}
+function loadSurfaceImage(file,size,colorSpace,fallback){
+ let done;surfaceJobs.push(new Promise(resolve=>{done=resolve}));
+ const map=new T.TextureLoader().load('assets/materials/'+file,()=>{fallback.dispose();done()},undefined,()=>{map.image=fallback.image;map.isDataTexture=true;map.flipY=false;map.needsUpdate=true;done()});
+ map.wrapS=map.wrapT=T.RepeatWrapping;map.repeat.set(1/size,1/size);map.colorSpace=colorSpace;map.magFilter=T.LinearFilter;map.minFilter=T.LinearMipmapLinearFilter;map.generateMipmaps=true;return map;
+}
 const fract=x=>x-Math.floor(x);
 const hash=(x,y)=>fract(Math.sin(x*127.1+y*311.7)*43758.5453);
 function noise(x,y,period){
@@ -64,13 +70,21 @@ export function surface(kind){
  if(cache.has(kind))return cache.get(kind);
  const spec=specifications[kind];if(!spec)throw Error('Unknown surface '+kind);
  const textures=buildTextures(kind);
- if(rasterSurfaces[kind]){const [file,size]=rasterSurfaces[kind],fallback=textures.map;
-  let done;surfaceJobs.push(new Promise(resolve=>{done=resolve}));
-  const map=new T.TextureLoader().load('assets/materials/'+file,()=>{fallback.dispose();done()},undefined,()=>{map.image=fallback.image;map.isDataTexture=true;map.flipY=false;map.needsUpdate=true;done()});
-  map.wrapS=map.wrapT=T.RepeatWrapping;map.repeat.set(1/size,1/size);map.colorSpace=T.SRGBColorSpace;map.magFilter=T.LinearFilter;map.minFilter=T.LinearMipmapLinearFilter;map.generateMipmaps=true;textures.map=map;
+ if(rasterSurfaces[kind]){const [file,size]=rasterSurfaces[kind];textures.map=loadSurfaceImage(file,size,T.SRGBColorSpace,textures.map)}
+ const photographic=photographicSurfaces[kind];
+ if(photographic){
+  const {asset,size}=photographic,folder='photographic/'+asset;
+  const flatNormal=new T.DataTexture(new Uint8Array([128,128,255,255]),1,1,T.RGBAFormat);
+  textures.map=loadSurfaceImage(folder+'_diff_1k.jpg',size,T.SRGBColorSpace,textures.map);
+  textures.normalMap=loadSurfaceImage(folder+'_nor_gl_1k.png',size,T.NoColorSpace,flatNormal);
+  textures.roughnessMap=loadSurfaceImage(folder+'_rough_1k.jpg',size,T.NoColorSpace,textures.roughnessMap);
+  // The measured normal map supplies the relief; a second procedural bump
+  // would put unrelated joints through the photographic paving pattern.
+  textures.bumpMap.dispose();delete textures.bumpMap;
  }
  const m=new T.MeshStandardMaterial({...textures,roughness:spec.roughness,bumpScale:spec.bump});
  m.name=kind;m.userData.metreUV=true;
+ if(photographic){m.normalScale.setScalar(photographic.normal);m.userData.photographicSurface=photographic.asset;m.userData.textureScaleMetres=photographic.size}
  if(kind==='grass'){
   // Broad colour variation prevents a visibly tiled carpet at building scale.
   m.onBeforeCompile=shader=>{
@@ -86,8 +100,16 @@ export function surface(kind){
  cache.set(kind,m);return m;
 }
 export function glassMaterial(railing=false){
- const m=new T.MeshPhysicalMaterial({color:railing?0xe9f2ee:0x99b4b5,metalness:.12,roughness:railing?.07:.065,transparent:true,opacity:railing?.17:.57,depthWrite:false,side:T.DoubleSide,clearcoat:1,clearcoatRoughness:.045,envMapIntensity:1.45});
- m.name=railing?'Balcony glass':'Window glass';m.userData.reflectionSurface=true;return m;
+ const m=new T.MeshPhysicalMaterial({color:railing?0xf1f8f3:0xdce9eb,metalness:0,ior:1.5,roughness:railing?.065:.09,transparent:true,opacity:railing?.12:.28,depthWrite:false,side:T.DoubleSide,clearcoat:.25,clearcoatRoughness:.065,envMapIntensity:1.15});
+ m.name=railing?'Balcony glass':'Window glass';m.userData.reflectionSurface=true;
+ // Stronger reflections at grazing angles, clear views through the pane head-on.
+ // Alpha glazing keeps the floor cutaway and the low-cost walking renderer usable.
+ m.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>',`
+  float glassFresnel=pow(1.0-clamp(abs(dot(normal,normalize(vViewPosition))),0.0,1.0),5.0);
+  diffuseColor.a=mix(opacity,0.90,glassFresnel);
+  #include <opaque_fragment>
+ `)};
+ m.customProgramCacheKey=()=> 'rokyta-dielectric-glass-3';return m;
 }
 export function finishSurfaces(root,renderer){
  const done=new WeakSet(),filtered=new WeakSet(),anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());root.traverse(mesh=>{
