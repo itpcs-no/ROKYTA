@@ -5,6 +5,21 @@ const bounds=points=>({x0:Math.min(...points.map(p=>p[0])),x1:Math.max(...points
 const overlaps=(a,b)=>a.x0<b.x1-1e-8&&a.x1>b.x0+1e-8&&a.z0<b.z1-1e-8&&a.z1>b.z0+1e-8;
 export const rectOutline=r=>[[r.x0,r.z0],[r.x1,r.z0],[r.x1,r.z1],[r.x0,r.z1]];
 
+// Supported terrain/paving patch with one top face at every x/z. Its edges
+// meet neighboring patches exactly; there are no stacked decorative planes.
+export function gradedSolid(bounds,height,material,name,bottom=-.12){
+ const {x0,x1,z0,z1}=bounds,nx=Math.max(1,Math.ceil((x1-x0)/.6)),nz=Math.max(1,Math.ceil((z1-z0)/.6)),p=[];
+ const at=(i,j)=>{const x=x0+(x1-x0)*i/nx,z=z0+(z1-z0)*j/nz;return [x,height(x,z),z]};
+ const tri=(a,b,c)=>p.push(...a,...b,...c);
+ for(let i=0;i<nx;i++)for(let j=0;j<nz;j++){const a=at(i,j),b=at(i+1,j),c=at(i+1,j+1),d=at(i,j+1);tri(a,c,b);tri(a,d,c)}
+ const edge=(a,b)=>{const c=[a[0],bottom,a[2]],d=[b[0],bottom,b[2]];tri(a,b,c);tri(b,d,c)};
+ for(let i=0;i<nx;i++){edge(at(i,0),at(i+1,0));edge(at(i+1,nz),at(i,nz))}
+ for(let j=0;j<nz;j++){edge(at(0,j+1),at(0,j));edge(at(nx,j),at(nx,j+1))}
+ tri([x0,bottom,z0],[x1,bottom,z0],[x1,bottom,z1]);tri([x0,bottom,z0],[x1,bottom,z1],[x0,bottom,z1]);
+ const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(p,3));geo.computeVertexNormals();geo.userData.uvProjection='xz';
+ const mesh=new T.Mesh(geo,material);mesh.name=name;mesh.castShadow=mesh.receiveShadow=true;mesh.userData.walkSurface=true;return mesh;
+}
+
 export function roadEdges(road){
  return road.points.map((p,i)=>{
   const a=road.points[Math.max(0,i-1)],b=road.points[Math.min(road.points.length-1,i+1)];

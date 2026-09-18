@@ -1,3 +1,4 @@
+import {sideApproach,gardenBlend,caretakerGardenHeight} from './caretaker-access-layout.js';
 import * as T from 'three';
 import {buildParkedCars} from './parked-cars.js';
 import {surface,glassMaterial} from './surface-materials.js';
@@ -13,8 +14,8 @@ import {buildOutdoorWellness} from './outdoor-wellness.js';
 import {buildArchitectureFinish} from './architecture-finish.js';
 import {wellnessOutline,wellnessBeds} from './wellness-layout.js';
 import {courtSite,courtTerrainBounds,courtTerrainHeight} from './court-layout.js';
-import {subtractTopSurfaces,rectOutline} from './surface-geometry.js';
-import {garage,ramp,levels,footprints,gardenStairs,gardenPaths,access} from './project-geometry.js';
+import {subtractTopSurfaces,rectOutline,gradedSolid} from './surface-geometry.js';
+import {garage,ramp,levels,footprints,gardenStairs,gardenPaths,access,rampHeight,accessHeight} from './project-geometry.js';
 // Visual reconstruction of the 1 August 2018 references, fitted to the PDF footprint.
 // Facade opening rhythm and terrain are estimates, not measured survey geometry.
 export function buildExterior(){
@@ -60,20 +61,11 @@ export function buildExterior(){
   for(const x of [-7.94,10.89]){facade('z',x,-1.4,15.85,y,2.78,[[.8,1.5,.1,2.25],[4.5,2.4,.1,2.25],[8.6,2.6,.1,2.25],[12.8,2.4,.1,2.25]],m);if(x<0){balcony('z',x,-1.42,16.01,y,1.4,-1);for(const z of [-1.4,3.1,7.7,12.3,15.85])box(root,x-1.27,y+(levels[f+1]-y)/2,z,.26,levels[f+1]-y,.28,white)}else for(const z of [4.5,10.9])balcony('z',x,z-1.5,z+1.5,y,1.1)}
   
  }cap('garden-wing',-7.94,10.89,-1.42,16.01,levels[3]);
- // D7 is on the side facing the ramp: 5500 x 3000, threshold +2.780.
- const gx=garage.x1,gz=(garage.doorZ0+garage.doorZ1)/2;
- const door=new T.Group();door.name='Garage D7';root.add(door);
- box(door,gx,garage.floor+garage.doorHeight/2,gz,.09,garage.doorHeight,5.5,frame);
- for(let y=garage.floor+.08;y<garage.floor+garage.doorHeight;y+=.15)box(door,gx+.06,y,gz,.025,.022,5.5,roof);
- for(const z of [garage.doorZ0-.07,garage.doorZ1+.07])box(root,gx+.025,garage.floor+1.54,z,.2,3.08,.14,white);
- box(root,gx+.025,garage.floor+3.08,gz,.2,.16,5.78,white);
+ // Attached caretaker dwelling keeps the coordinated roof and main-wing junction.
+ const gz=(garage.doorZ0+garage.doorZ1)/2;
  cap('garage',garage.x0,garage.x1,garage.z0,garage.z1,levels[2]);
- box(root,(garage.x1+ramp.x0)/2,garage.floor/2,(ramp.z0+ramp.z1)/2,ramp.x0-garage.x1,garage.floor,ramp.z1-ramp.z0,paving);
- // Ramp surface and solid supporting wedge; 6 degrees from plan, no suspended plane.
- const vertices=[ramp.x0,ramp.top,ramp.z0,ramp.x0,ramp.top,ramp.z1,ramp.x1,ramp.bottom,ramp.z1,ramp.x0,ramp.top,ramp.z0,ramp.x1,ramp.bottom,ramp.z1,ramp.x1,ramp.bottom,ramp.z0];
- for(const z of [ramp.z0,ramp.z1])vertices.push(ramp.x0,0,z,ramp.x1,0,z,ramp.x1,ramp.bottom,z,ramp.x0,0,z,ramp.x1,ramp.bottom,z,ramp.x0,ramp.top,z);
- const rg=new T.BufferGeometry();rg.setAttribute('position',new T.Float32BufferAttribute(vertices,3));rg.computeVertexNormals();const rm=paving.clone();rm.side=T.DoubleSide;const rampMesh=new T.Mesh(rg,rm);rampMesh.receiveShadow=true;rampMesh.castShadow=true;root.add(rampMesh);
- const drive=box(root,(access.x0+access.x1)/2,access.level/2,(access.z0+access.z1)/2,access.x1-access.x0,access.level,access.z1-access.z0,paving);drive.name='Unobstructed garage approach';
+ const rampMesh=gradedSolid(ramp,(x,z)=>rampHeight(x),paving,'Priamy príjazd k domu správcu');root.add(rampMesh);
+ const drive=gradedSolid(access,accessHeight,paving,'Plynulé napojenie príjazdu na cestu');root.add(drive);
  // Lower drive, two planted terraces, storage rooms beneath the old grass roof.
  const groundShape=new T.Shape();groundShape.moveTo(-700,700);groundShape.lineTo(700,700);groundShape.lineTo(700,-700);groundShape.lineTo(-700,-700);groundShape.closePath();
  // The graded hill replaces this part of the ground, including its outer edge.
@@ -87,10 +79,18 @@ export function buildExterior(){
   const x=side<0?-23:25,soilFront=side<0?1.51:eastCellars.back;
   // Excavate only the new cellar footprint; the garden continues behind and
   // above the rooms, without a solid soil block sealing their doorways.
-  box(root,x,1.24,(soilFront+23.5)/2,19,2.48,23.5-soilFront,earth);
-  box(root,x,2.51,10.5,19,.08,26,lawn);
-  if(side<0)box(root,x,1.22,1.51,19,2.48,.23,white);
-  box(root,x,2.525,12.8,19,.1,1.5,paving);box(root,x,2.51,22.4,19,.13,4,paving);
+  if(side<0){
+   box(root,x,1.24,(soilFront+23.5)/2,19,2.48,23.5-soilFront,earth);
+   box(root,x,2.51,10.5,19,.08,26,lawn);
+   box(root,x,1.22,1.51,19,2.48,.23,white);
+   box(root,x,2.51,22.4,19,.13,4,paving);
+  }else{
+   root.add(gradedSolid({x0:sideApproach.x0,x1:sideApproach.x1,z0:soilFront,z1:gardenBlend.z0},()=>2.48,earth,'Podložie bočnej záhrady'));
+   box(root,x,2.51,(gardenBlend.z0-2.5)/2,19,.08,gardenBlend.z0+2.5,lawn);
+   root.add(gradedSolid(gardenBlend,(x,z)=>caretakerGardenHeight(z),lawn,'Trávnaté napojenie na znížený chodník'));
+   root.add(gradedSolid(sideApproach,()=>sideApproach.level,paving,'Bočný chodník v jednej línii s príjazdom'));
+  }
+  box(root,x,2.525,12.8,19,.1,1.5,paving);
  }
  box(root,-23,cellars.floor-.06,(cellars.approachFront+cellars.back)/2,25,.12,cellars.back-cellars.approachFront,paving).name='Cellar courtyard';const cellarRoof=box(root,-23,2.35,-1.6,25,.22,6.2,white);box(root,-23,2.49,-1.6,25,.08,6.2,lawn);const cellarBack=box(root,-23,1.1,1.4,25,2.3,.22,white);for(let x=-35.5;x<=-10.5;x+=3.125)box(root,x,1.1,-4.7,.25,2.3,.25,white);
  const ec=eastCellars,ecX=(ec.x0+ec.x1)/2,ecZ=(ec.front+ec.back)/2;
@@ -99,9 +99,6 @@ export function buildExterior(){
  const eastCellarBack=box(root,ecX,(ec.floor+ec.ceiling)/2,ec.back,ec.x1-ec.x0,ec.ceiling-ec.floor,.22,white);eastCellarBack.name='Zadná stena nových kobiek';
  root.add(buildParkedCars());
  const parkingStorage=buildParkingAndStorage();parkingStorage.userData.occluders.push(cellarRoof,cellarBack,eastCellarRoof,eastCellarBack);root.add(parkingStorage);
- // Flush drainage grating at the garage threshold; no new obstacle on the ramp.
- box(root,garage.x1+.22,garage.floor+.002,gz,.24,.006,5.48,frame);
- for(let z=garage.doorZ0+.07;z<garage.doorZ1;z+=.09)box(root,garage.x1+.22,garage.floor+.008,z,.23,.008,.023,coping);
  // Garden paths, retaining edges, stair links and planted borders.
  // One watertight stepped solid per flight, exactly meeting the landing.
  for(const f of gardenStairs.flights){
@@ -120,7 +117,7 @@ export function buildExterior(){
  box(root,-33,1.3,10.6,.22,2.6,26,white);
  root.add(buildGardenBank(ramp.bottom));
  const planting=createPlanting();
- for(let x=-32;x<34;x+=1.2){if(x<-11||x>13){planting.shrub(x,21);planting.shrub(x,-1.2);planting.tuft(x+.4,20.6,2.56,.16)}}
+ for(let x=-32;x<34;x+=1.2){if(x<-11||x>13){planting.shrub(x,x>13?18:21);planting.shrub(x,-1.2);planting.tuft(x+.4,x>13?17.6:20.6,2.56,.16)}}
  for(const [x,z] of [[-29,16],[-18,17],[23,17],[31,10]]){planting.tree(x,z);for(let i=0;i<16;i++){const a=i*2.399;planting.tuft(x+Math.cos(a)*.55,z+Math.sin(a)*.55,2.55,.22)}}
  // Illustrative distant planting softens the horizon, outside the project plot.
  for(let i=0;i<40;i++){const a=i*2.399,r=90+(i%7)*11,x=Math.cos(a)*r,z=Math.sin(a)*r;planting.tree(x,z,courtTerrainHeight(x,z,ramp.bottom)??-.06,1+(i%4)*.18,true)}
@@ -133,5 +130,5 @@ export function buildExterior(){
  for(const x of [-24,26]){box(root,x,2.59,15,4.5,.09,4,roof);for(const dx of [-.75,.75])for(const dz of [-.6,.6])box(root,x+dx,3.65,15+dz,.12,2.1,.12,wood);box(root,x,4.55,15,1.8,.12,1.6,wood);for(let i=0;i<5;i++)box(root,x,2.9+i*.3,16-i*.15,1,.08,.15,wood)}
 
  const photovoltaics=buildPhotovoltaics(roofSurfaces);root.add(photovoltaics);roofs.push(photovoltaics);
- root.userData={reference:'PDF geometry with facade details',estimatedTerrain:true,roofs,roofSurfaces,photovoltaics,garageDoor:door,deckOutline,deckRails,site,parkingStorage,homes:landscape.userData.homes,wellness,architecturalFinish};return root;
+ root.userData={reference:'PDF geometry with facade details',estimatedTerrain:true,roofs,roofSurfaces,photovoltaics,deckOutline,deckRails,site,parkingStorage,homes:landscape.userData.homes,wellness,architecturalFinish};return root;
 }
