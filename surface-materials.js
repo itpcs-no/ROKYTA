@@ -112,7 +112,7 @@ export function glassMaterial(railing=false){
  m.customProgramCacheKey=()=> 'rokyta-dielectric-glass-3';return m;
 }
 export function finishSurfaces(root,renderer){
- const done=new WeakSet(),filtered=new WeakSet(),anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());root.traverse(mesh=>{
+ const done=new WeakSet(),filtered=new WeakSet(),anisotropy=Math.min(16,renderer.capabilities.getMaxAnisotropy());root.traverse(mesh=>{
   if(!mesh.isMesh)return;const mats=Array.isArray(mesh.material)?mesh.material:[mesh.material];
   for(const m of mats)for(const texture of [m.map,m.bumpMap,m.normalMap,m.roughnessMap])if(texture&&!filtered.has(texture)){
    filtered.add(texture);texture.anisotropy=anisotropy;texture.needsUpdate=true;
