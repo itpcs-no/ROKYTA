@@ -24,7 +24,7 @@ export function roadEdges(road){
  return road.points.map((p,i)=>{
   const a=road.points[Math.max(0,i-1)],b=road.points[Math.min(road.points.length-1,i+1)];
   const [dx,dz]=i===road.points.length-1&&road.endDirection?road.endDirection:[b[0]-a[0],b[1]-a[1]],scale=road.width/2/Math.hypot(dx,dz);
-  return [-1,1].map(sign=>[p[0]-sign*dz*scale,p[2],p[1]+sign*dx*scale]);
+  return [-1,1].map(sign=>{const x=p[0]-sign*dz*scale,z=p[1]+sign*dx*scale;return [x,road.heightAt?road.heightAt(x,z):p[2],z]});
  });
 }
 

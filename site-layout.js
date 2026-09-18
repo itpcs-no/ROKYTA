@@ -3,7 +3,12 @@
 // gives 2.5401 px/m; the pool fixes orientation (map right is model negative x).
 // Ground levels outside the PDF ramp remain estimates.
 import {curvedRoadPoints,curvedBankHeight} from './curved-parking-layout.js';
-export const entrance={x:44,z:30.5,width:6,slide:6.7};
+export const entrance={x:44,z:30.5,width:6,slide:6.7,slideSign:-1};
+export const secondaryEntrance={x:44,z:-34,width:6,slide:6.7,slideSign:1};
+export const entrances=[entrance,secondaryEntrance];
+export const secondaryAccess={id:'secondary-access',x:40.5,width:5,turnRadius:5.5};
+export function entrancePocket(g){const a=g.z+g.slideSign*3,b=g.z+g.slideSign*10.5;return {x0:g.x-.7,x1:g.x+.4,z0:Math.min(a,b),z1:Math.max(a,b)}}
+export function entranceHeight(g,level){return g===entrance?level:closestRoad(51.5,g.z,siteRoads(level)[1]).height}
 export const serviceHouse={x0:-57.7,x1:-51.3,z0:-10.25,z1:4.45,base:.06,eaves:3.1,rise:.75};
 export const serviceShed={x0:-60.7,x1:-56.7,z0:-32.85,z1:-23.05,base:.06};
 // Social pavilion replaces the open shed; furniture coordinates are local to
@@ -43,10 +48,23 @@ function sample(points){
 }
 const roadCache=new Map();
 export function siteRoads(level){
- if(!roadCache.has(level))roadCache.set(level,[
+ if(!roadCache.has(level)){
+ const roads=[
   {name:'Cesta od brány okolo záhrady',width:5,points:[...sample([[48.75,30.5,level],[39,30.5,level],[16,30.5,level],[-22,30.5,level],[-37,30.5,level],[-47.5,30.5,level]]).slice(0,-1),...curvedRoadPoints(level),...sample([[-48.3,5.6,.06],[-48.6,-7.8,.06],[-49.3,-20,.06],[-50,-34,.06]]).slice(1)]},
   {name:'Vonkajšia príjazdová cesta',width:5.5,points:sample([[51.5,-65,.06],[51.5,-42,.06],[51.5,-15,.38],[51.5,14,level],[51.5,26,level],[51.5,34,level],[51.5,43,level],[51.5,70,.06]])}
- ]);
+ ];
+ const s=secondaryAccess,g=secondaryEntrance,publicRoad=roads[1],endLevel=closestRoad(51.5,g.z,publicRoad).height;
+ const turnZ=g.z+s.turnRadius,turnX=s.x+s.turnRadius;
+ // A graded lane inside the boundary, a rounded turn through the new gate,
+ // and a crossfall at the public-road joint all share this one height model.
+ const heightAt=(x,z)=>{const t=clamp((z-turnZ)/(entrance.z-roads[0].width/2-turnZ)),u=t*t*(3-2*t),base=endLevel+(level-endLevel)*u,apronStart=g.x+1.2,w=clamp((x-apronStart)/(48.75-apronStart));return w?base+(closestRoad(51.5,z,publicRoad).height-base)*w:base};
+ const points=[],count=Math.ceil((entrance.z-turnZ)*2);
+ for(let i=0;i<=count;i++){const z=entrance.z+(turnZ-entrance.z)*i/count;points.push([s.x,z,heightAt(s.x,z)])}
+ for(let i=1;i<=24;i++){const angle=Math.PI+i*Math.PI/48,x=turnX+s.turnRadius*Math.cos(angle),z=turnZ+s.turnRadius*Math.sin(angle);points.push([x,z,heightAt(x,z)])}
+ for(let i=1;i<=11;i++){const x=turnX+(51.5-turnX)*i/11;points.push([x,g.z,heightAt(x,g.z)])}
+ roads.push({id:s.id,name:'Cesta medzi hlavnou a druhou bránou',width:s.width,points,heightAt,endDirection:[1,0]});
+ roadCache.set(level,roads);
+ }
  return roadCache.get(level);
 }
 export function closestRoad(x,z,road){
@@ -55,10 +73,10 @@ export function closestRoad(x,z,road){
   const a=road.points[i-1],b=road.points[i],dx=b[0]-a[0],dz=b[1]-a[1],t=clamp(((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz));
   const distance=Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz);
   if(distance<best.distance)best={distance,height:a[2]+t*(b[2]-a[2])};
- }return best;
+ }if(road.heightAt)best.height=road.heightAt(x,z);return best;
 }
 export function sitePavedHeight(x,z,level){
- if(x>=43.3&&x<=44.4&&z>=20&&z<=27.5)return level;
+ for(const g of entrances){const p=entrancePocket(g);if(x>=p.x0&&x<=p.x1&&z>=p.z0&&z<=p.z1)return entranceHeight(g,level)}
  // Apron, side entrance to existing covered parking, and pedestrian exit.
  if(inSitePolygon(x,z,servicePaving)||(x>=-48.6&&x<=37&&z>=-9.95&&z<=-5.65)||(x>=-37&&x<=-35&&z>=-49&&z<=-43.5))return .06;
  for(const road of siteRoads(level)){const p=closestRoad(x,z,road);if(p.distance<=road.width/2+.001)return p.height}
@@ -69,8 +87,12 @@ export function siteShoulderHeight(x,z,level){
  if(z>=33&&x<49)return null;
  if(curvedBankHeight(x,z,level)!==null)return null;
  let y=null;
- if(!(x>-37&&x<39&&z<25))for(const road of siteRoads(level)){
+ for(const road of siteRoads(level)){
+  if(x>-37&&x<39&&z<25&&road.id!==secondaryAccess.id)continue;
   const p=closestRoad(x,z,road),r=road.width/2;
+  // The new shoulder mesh is clipped at the exact road outline afterwards.
+  // Keep its grid continuous across the pavement so edge cells cannot vanish.
+  if(road.id===secondaryAccess.id&&p.distance<=r)y=Math.max(y??-.06,p.height);
   if(p.distance>r&&p.distance<r+3.6){const t=clamp((p.distance-r)/3.6);y=Math.max(y??-.06,(p.height-.025)*(1-t)-.06*t)}
  }
  const g=roadsideGarden;
@@ -81,17 +103,20 @@ export function siteShoulderHeight(x,z,level){
  return y;
 }
 export const siteBoundary=[
- {points:[[44,27.2],[44,-41],[33,-48],[-35,-48]],type:'wall'},
+ {points:[[44,27.2],[44,secondaryEntrance.z+3.3]],type:'wall'},
+ {points:[[44,secondaryEntrance.z-3.3],[44,-41],[33,-48],[-35,-48]],type:'wall'},
  {points:[[-37,-48],[-59,-48],[-66,-40],[-66,25],[-64,35],[-65,72]],type:'fence'},
  {points:[[-65,72],[-58,86],[31,86],[43,76],[45,42],[44,33.8]],type:'fence'}
 ];
 export const boundarySegments=siteBoundary.flatMap(part=>part.points.slice(1).map((p,i)=>({a:part.points[i],b:p,type:part.type})));
 function near(x,z,a,b,r){const dx=b[0]-a[0],dz=b[1]-a[1],t=clamp(((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz));return Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz)<r}
-export function siteBarrierAt(x,z,open){
+export function siteBarrierAt(x,z,open,secondaryOpen=open){
  if(boundarySegments.some(s=>near(x,z,s.a,s.b,.35)))return true;
- if(Math.abs(x-entrance.x)<.48&&(Math.abs(z-27.2)<.52||Math.abs(z-33.8)<.52))return true;
- const cz=entrance.z-(open?entrance.slide:0);
- if(Math.abs(x-(entrance.x-.29))<.24&&Math.abs(z-cz)<entrance.width/2+.18)return true;
+ for(const [i,g] of entrances.entries()){
+  if(Math.abs(x-g.x)<.48&&[-1,1].some(sign=>Math.abs(z-g.z-sign*(g.width/2+.3))<.52))return true;
+  const cz=g.z+((i?secondaryOpen:open)?g.slideSign*g.slide:0);
+  if(Math.abs(x-(g.x-.29))<.24&&Math.abs(z-cz)<g.width/2+.18)return true;
+ }
  const h=serviceHouse;
  if(x>h.x0-.18&&x<h.x1+.18&&z>h.z0-.18&&z<h.z1+.18)return true;
  return pavilionBarrierAt(x,z);
