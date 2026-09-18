@@ -15,7 +15,7 @@ import {buildArchitectureFinish} from './architecture-finish.js';
 import {wellnessOutline,wellnessBeds} from './wellness-layout.js';
 import {courtSite,courtTerrainBounds,courtTerrainHeight} from './court-layout.js';
 import {subtractTopSurfaces,rectOutline,gradedSolid} from './surface-geometry.js';
-import {garage,ramp,levels,footprints,gardenStairs,gardenPaths,access,rampHeight,accessHeight} from './project-geometry.js';
+import {garage,ramp,levels,slabThickness,footprints,gardenStairs,gardenPaths,gardenPavedAreas,access,rampHeight,accessHeight} from './project-geometry.js';
 // Visual reconstruction of the 1 August 2018 references, fitted to the PDF footprint.
 // Facade opening rhythm and terrain are estimates, not measured survey geometry.
 export function buildExterior(){
@@ -27,7 +27,11 @@ export function buildExterior(){
  function facade(){} // The real PDF walls/windows are rendered by the shared floor groups.
  function rail(axis,fixed,a,b,y){const g=new T.Group();root.add(g);if(axis==='z'){g.rotation.y=-Math.PI/2;g.position.x=fixed}else g.position.z=fixed;box(g,(a+b)/2,y+.57,0,b-a,.8,.025,railglass);box(g,(a+b)/2,y+1.02,0,b-a,.035,.045,frame);const count=Math.ceil((b-a)/1.5);for(let i=0;i<=count;i++)box(g,a+(b-a)*i/count,y+.51,0,.035,1.02,.035,frame)}
  const coping=material(0xb6b8b3,.34);coping.metalness=.58;
- function cap(id,x0,x1,z0,z1,y){const start=root.children.length;const slab=box(root,(x0+x1)/2,y-.12,(z0+z1)/2,x1-x0,.42,z1-z0,roof);subtractTopSurfaces(slab,roofSurfaces.filter(r=>Math.abs(r.top-y-.09)<.001).map(rectOutline),true);for(const z of [z0,z1]){box(root,(x0+x1)/2,y+.2,z,x1-x0,.4,.18);box(root,(x0+x1)/2,y+.408,z,x1-x0+.08,.024,.23,coping)}for(const x of [x0,x1]){box(root,x,y+.2,(z0+z1)/2,.18,.4,z1-z0);box(root,x,y+.408,(z0+z1)/2,.23,.024,z1-z0+.08,coping)}roofs.push(...root.children.slice(start));roofSurfaces.push({id,x0,x1,z0,z1,top:y+.09})}
+ function cap(id,x0,x1,z0,z1,y){const start=root.children.length,bottom=y-slabThickness,top=y+.09;
+  // The roof starts where the walls end. The old 0.42 m cap extended 10 cm
+  // into the facade, leaving white plaster and dark fascia in the same plane.
+  const slab=box(root,(x0+x1)/2,(bottom+top)/2,(z0+z1)/2,x1-x0,top-bottom,z1-z0,roof);slab.name='Strešná doska · '+id;slab.userData.roofCap={id,bottom,top};
+  subtractTopSurfaces(slab,roofSurfaces.filter(r=>Math.abs(r.top-top)<.001).map(rectOutline),true);for(const z of [z0,z1]){box(root,(x0+x1)/2,y+.2,z,x1-x0,.4,.18);box(root,(x0+x1)/2,y+.408,z,x1-x0+.08,.024,.23,coping)}for(const x of [x0,x1]){box(root,x,y+.2,(z0+z1)/2,.18,.4,z1-z0);box(root,x,y+.408,(z0+z1)/2,.23,.024,z1-z0+.08,coping)}roofs.push(...root.children.slice(start));roofSurfaces.push({id,x0,x1,z0,z1,top})}
  function balcony(axis,fixed,a,b,y,depth=1.7,sign=1){const center=fixed+sign*depth/2;if(axis==='x'){box(root,(a+b)/2,y-.1,center,b-a,.2,depth);box(root,(a+b)/2,y+.13,fixed+sign*depth,b-a,.42,.16);rail('x',fixed+sign*depth,a,b,y+.26);rail('z',a,Math.min(fixed,fixed+sign*depth),Math.max(fixed,fixed+sign*depth),y+.26);rail('z',b,Math.min(fixed,fixed+sign*depth),Math.max(fixed,fixed+sign*depth),y+.26)}else{box(root,center,y-.1,(a+b)/2,depth,.2,b-a);box(root,fixed+sign*depth,y+.13,(a+b)/2,.16,.42,b-a);rail('z',fixed+sign*depth,a,b,y+.26);rail('x',a,Math.min(fixed,fixed+sign*depth),Math.max(fixed,fixed+sign*depth),y+.26);rail('x',b,Math.min(fixed,fixed+sign*depth),Math.max(fixed,fixed+sign*depth),y+.26)}}
  // Long southern elevation, continuous balconies and recessed third storey.
  const bays=[-25.5,-20.7,-15.9,-11.1,-6.3,-1.5,3.3,8.1,12.9,17.7,22.5,26.4];
@@ -81,12 +85,14 @@ export function buildExterior(){
   // above the rooms, without a solid soil block sealing their doorways.
   if(side<0){
    box(root,x,1.24,(soilFront+23.5)/2,19,2.48,23.5-soilFront,earth);
-   box(root,x,2.51,10.5,19,.08,26,lawn);
+   const grass=box(root,x,2.51,10.5,19,.08,26,lawn);grass.name='Západná záhrada mimo chodníkov';
+   subtractTopSurfaces(grass,gardenPavedAreas.map(rectOutline));
    box(root,x,1.22,1.51,19,2.48,.23,white);
    box(root,x,2.51,22.4,19,.13,4,paving);
   }else{
    root.add(gradedSolid({x0:sideApproach.x0,x1:sideApproach.x1,z0:soilFront,z1:gardenBlend.z0},()=>2.48,earth,'Podložie bočnej záhrady'));
-   box(root,x,2.51,(gardenBlend.z0-2.5)/2,19,.08,gardenBlend.z0+2.5,lawn);
+   const grass=box(root,x,2.51,(gardenBlend.z0-2.5)/2,19,.08,gardenBlend.z0+2.5,lawn);grass.name='Východná záhrada mimo chodníkov';
+   subtractTopSurfaces(grass,gardenPavedAreas.map(rectOutline));
    root.add(gradedSolid(gardenBlend,(x,z)=>caretakerGardenHeight(z),lawn,'Trávnaté napojenie na znížený chodník'));
    root.add(gradedSolid(sideApproach,()=>sideApproach.level,paving,'Bočný chodník v jednej línii s príjazdom'));
   }

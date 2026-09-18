@@ -5,6 +5,7 @@ import {addDaylight} from './daylight.js';
 import {createRenderQuality} from './render-quality.js';
 import {addSceneReflections} from './scene-reflections.js';
 import {batchStaticMeshes} from './static-batching.js';
+import {createShadowUpdates} from './stable-shadows.js';
 import {architecturalBarrierAt} from './architecture-finish.js';
 import {subtractTopSurfaces,rectOutline} from './surface-geometry.js';
 import {courtSite,courtBarrierAt} from './court-layout.js';
@@ -23,9 +24,10 @@ try{await start()}catch(e){$('loading').style.display='block';$('loading').textC
 async function start(){
 const data=await fetch('./assets/model.json').then(r=>{if(!r.ok)throw Error('model');return r.json()});
 data.forEach((level,i)=>level.base=levels[i]);applyCaretakerLayout(data);
-const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.setClearColor(0xdce6eb);view.append(renderer.domElement);renderer.outputColorSpace=T.SRGBColorSpace;
+const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;renderer.setClearColor(0xdce6eb);view.append(renderer.domElement);renderer.outputColorSpace=T.SRGBColorSpace;
 const scene=new T.Scene();const camera=new T.PerspectiveCamera(48,innerWidth/innerHeight,.35,1600);const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.maxDistance=150;controls.minDistance=2;controls.maxPolarAngle=Math.PI*.49;controls.target.set(0,3,-3);
 const daylight=addDaylight(scene,renderer);const renderQuality=createRenderQuality(renderer);let atmosphereTime=0;
+const updateShadows=createShadowUpdates(renderer);
 $('quality').onchange=()=>{renderQuality.setQuality($('quality').value);const size=$('quality').value==='smooth'||innerWidth<800?2048:4096;if(daylight.sun.shadow.mapSize.x!==size){daylight.sun.shadow.map?.dispose();daylight.sun.shadow.map=null;daylight.sun.shadow.mapSize.set(size,size);renderer.shadowMap.needsUpdate=true}};
 const mat=surface('plaster'),sideMat=mat,slabMat=surface('paving'),glassMat=glassMaterial(),frameMat=new T.MeshStandardMaterial({color:0x30383b,metalness:.72,roughness:.3});
 function box(g,x,y,z,w,h,d,m){const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),m);mesh.position.set(x,y,z);mesh.castShadow=!m.transparent;mesh.receiveShadow=true;g.add(mesh);return mesh}
@@ -55,7 +57,7 @@ for(let f=0;f<4;f++){
   const pcx=horizontal?(l+r)/2:cx,pcz=horizontal?cz:(l+r)/2,pw=horizontal?r-l:dx,pd=horizontal?dz:r-l;
   box(group,pcx,bottom+windowHeight/2,pcz,horizontal?r-l:.045,windowHeight,horizontal?.045:r-l,glassMat);
   box(group,pcx,bottom/2,pcz,pw,bottom,pd,mat);
-  const head=(data[f].wallHeight||2.55)-windowTop;box(group,pcx,windowTop+head/2,pcz,pw,head+.006,pd,mat);
+  const head=(data[f].wallHeight||2.55)-windowTop;box(group,pcx,windowTop+head/2,pcz,pw,head,pd,mat);
   for(const y of [bottom+.0225,windowTop-.0225])box(group,pcx,y,pcz,horizontal?r-l:.065,.045,horizontal?.065:r-l,frameMat);
   for(const edge of [l+.022,r-.022])box(group,horizontal?edge:cx,bottom+windowHeight/2,horizontal?cz:edge,horizontal?.045:.065,windowHeight,horizontal?.065:.045,frameMat);
   if(r-l>2.6)box(group,pcx,bottom+windowHeight/2,pcz,horizontal?.045:.08,windowHeight,horizontal?.08:.045,frameMat);
@@ -198,8 +200,8 @@ function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMa
   }else{camera.position.set(nav.x,eyeY,nav.z);camera.rotation.set(pitch,yaw,0,'YXZ')}
   const insideHome=selected==='all'&&homeAt(nav.x,nav.z),indoors=!!insideHome||selected!=='all'||footprints[0].some(([a,b,c,d])=>nav.x>a&&nav.x<c&&nav.z>b&&nav.z<d);
   renderer.clippingPlanes=$('cutaway').checked?[new T.Plane(new T.Vector3(0,-1,0),2.55)]:indoors&&$('figure').checked?[new T.Plane(new T.Vector3(0,-1,0),(insideHome?homesLevel:selected==='all'?nav.y-1.65:levels[selected])+2.3)]:[];
-  renderer.shadowMap.needsUpdate=true;
  }else controls.update();
+ updateShadows(dt,mode==='walk'?(driving.active||walker.root):null,mode==='walk'&&!driving.active&&(keys.w||keys.s||keys.a||keys.d)?walkingTime:0);
  renderQuality.render(scene,camera);
 });
 }

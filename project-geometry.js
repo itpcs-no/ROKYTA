@@ -12,7 +12,9 @@ export function rampHeight(x){return ramp.top+(ramp.bottom-ramp.top)*Math.max(0,
 // Model coordination heights: upper levels inferred from the 2.950 m door openings
 // plus lintel/slab allowance; only garage +2.780 is an explicit supplied elevation.
 export const levels=[0,2.78,6.16,8.94];
-export const slabThickness=.24;
+// PDF-derived walls stop 0.23 m below the next finished floor. A thicker
+// visible slab shared a coplanar facade strip with those wall extrusions.
+export const slabThickness=.23;
 export const footprints=[
  [[-28.85,-22.98,28.85,-10.08],[-4.81,-10.65,4.91,-1.35],[-7.94,-1.42,10.89,16.01],[garage.x0,garage.z0,garage.x1,garage.z1]],
  [[-28.85,-22.98,28.85,-10.08],[-4.81,-10.65,4.91,-1.35],[-7.94,-1.42,10.89,16.01],[garage.x0,garage.z0,garage.x1,garage.z1]],
@@ -28,6 +30,12 @@ export function accessHeight(x,z){const t=Math.max(0,Math.min(1,(z-access.z0)/(a
 export const gardenPaths=[
  ...gardenStairs.flights.map(f=>({...f,z0:gardenStairs.z1,z1:access.pathEnd})),
  {x0:-13.5,x1:-11.35,z0:12.025,z1:access.pathEnd}
+];
+// Shared footprints keep paving, its turf cutouts and road shoulders aligned.
+export const gardenPavedAreas=[...gardenPaths,
+ {x0:-32.5,x1:-13.5,z0:20.4,z1:24.4},sideApproach,
+ ...[[-32.5,-13.5],[15.5,34.5]].map(([x0,x1])=>({x0,x1,z0:12.05,z1:13.55})),
+ ...[-24,26].map(x=>({x0:x-2.25,x1:x+2.25,z0:13,z1:17}))
 ];
 export function gardenStairHeight(z){
  const s=gardenStairs,step=Math.max(0,Math.min(s.count,Math.floor((z-s.z0)/(s.z1-s.z0)*s.count)+1));

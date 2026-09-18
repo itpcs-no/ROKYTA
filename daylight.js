@@ -1,9 +1,11 @@
 import * as T from 'three';
 import {HDRLoader} from './assets/HDRLoader.js';
+import {installStableShadows} from './stable-shadows.js';
 
 export function addDaylight(scene,renderer){
+ installStableShadows();
  renderer.toneMapping=T.AgXToneMapping;renderer.toneMappingExposure=1.0;
- renderer.shadowMap.type=T.PCFSoftShadowMap;
+ renderer.shadowMap.type=T.PCFShadowMap;
  renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;
  scene.fog=new T.FogExp2(0xd5dfe2,.00115);
  const sunDirection=new T.Vector3(-.85,.70,-.65).normalize();
