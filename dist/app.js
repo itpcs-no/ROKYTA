@@ -1,5 +1,6 @@
 import {applyCaretakerLayout,buildCaretakerInterior,caretaker,caretakerBarrierAt} from './caretaker-house.js';
 import {createDriving} from './driving.js';
+import {prepareCarAssets} from './parked-cars.js';
 import {surface,glassMaterial,finishSurfaces,updateSurfaceTime,waitForSurfaceImages} from './surface-materials.js';
 import {addDaylight} from './daylight.js';
 import {createRenderQuality} from './render-quality.js';
@@ -22,7 +23,7 @@ import {OrbitControls} from './assets/OrbitControls.js';
 const $=id=>document.getElementById(id), view=$('view');
 try{await start()}catch(e){$('loading').style.display='block';$('loading').textContent='Model sa nepodarilo načítať. Skús obnoviť stránku v prehliadači s podporou WebGL.';console.error(e)}
 async function start(){
-const data=await fetch('./assets/model.json').then(r=>{if(!r.ok)throw Error('model');return r.json()});
+const [data]=await Promise.all([fetch('./assets/model.json').then(r=>{if(!r.ok)throw Error('model');return r.json()}),prepareCarAssets()]);
 data.forEach((level,i)=>level.base=levels[i]);applyCaretakerLayout(data);
 const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;renderer.setClearColor(0xdce6eb);view.append(renderer.domElement);renderer.outputColorSpace=T.SRGBColorSpace;
 const scene=new T.Scene();const camera=new T.PerspectiveCamera(48,innerWidth/innerHeight,.35,1600);const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.maxDistance=150;controls.minDistance=2;controls.maxPolarAngle=Math.PI*.49;controls.target.set(0,3,-3);
@@ -122,6 +123,7 @@ function useCar(){
  selected='all';$('floor').value='all';driving.enter(car);nav.set(car.position.x,car.position.y+1.65,car.position.z);yaw=car.rotation.y;pitch=-.35;walkDistance=7;visibility();
 }
 $('carsView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(parkingBays[0].x,33.8,true);yaw=Math.PI;pitch=-.25};
+$('carDetail').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();const car=cars.children[0],target=car.position.clone().add(new T.Vector3(0,.65,0)),offset=new T.Vector3(1.3,1.1,-4.4).applyAxisAngle(new T.Vector3(0,1,0),car.rotation.y);offset.setLength(Math.max(offset.length(),1.9/(Math.tan(camera.fov*Math.PI/360)*camera.aspect)));controls.target.copy(target);camera.position.copy(target).add(offset);controls.update();$('panel').classList.remove('open')};
 $('parkingView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;orbitHome();const a=curvedParking.cx-curvedParking.frontRadius-curvedParking.depth,b=hillsideParking.blocks.at(-1).x1,wide=innerWidth>760,center=(a+b)/2+(wide?10:0),distance=Math.max(63,((b-a)/2+(wide?16:6))/(Math.tan(camera.fov*Math.PI/360)*camera.aspect));controls.maxDistance=Math.max(150,distance*1.25);camera.position.set(center,3.7+distance*.43,36-distance);controls.target.set(center,3.7,31);controls.update();$('panel').classList.remove('open')};
 $('cellarsView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(cellarDoors[0].x+cellars.doorWidth/2,cellars.front-1.4,true);yaw=Math.PI;pitch=-.25};
 $('eastCellarsView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(eastCellars.x0+eastCellars.pitch/2,eastCellars.front-1.4,true);yaw=Math.PI;pitch=-.25;$('panel').classList.remove('open')};

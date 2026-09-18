@@ -1,40 +1,71 @@
 import * as T from 'three';
+import {GLTFLoader} from './assets/loaders/GLTFLoader.js';
 import {parkingBays} from './parking-layout.js';
 import {ramp} from './project-geometry.js';
 import {curvedParkingBays,curvedFloor} from './curved-parking-layout.js';
-// One drivable car in every recessed parking bay.
-export function buildParkedCars(){
- const cars=new T.Group();cars.name='Cars in covered parking';cars.userData.location='Under the courts';
- const rubber=new T.MeshStandardMaterial({color:0x202427,roughness:.92}),trim=new T.MeshStandardMaterial({color:0x30383b,roughness:.62}),rim=new T.MeshStandardMaterial({color:0xb4bcc0,metalness:.75,roughness:.28}),glass=new T.MeshStandardMaterial({color:0x294450,metalness:.32,roughness:.18}),headlight=new T.MeshStandardMaterial({color:0xeaf2ef,emissive:0xb7cbd0,emissiveIntensity:.2}),tail=new T.MeshStandardMaterial({color:0x941f22,roughness:.4});
- function rounded(w,h,d){const r=Math.min(.065,w*.13,h*.22,d*.13),a=w/2-r,b=h/2-r,shape=new T.Shape();shape.moveTo(-a,-b);shape.lineTo(a,-b);shape.lineTo(a,b);shape.lineTo(-a,b);shape.closePath();const geometry=new T.ExtrudeGeometry(shape,{depth:d-2*r,bevelEnabled:true,bevelSize:r,bevelThickness:r,bevelSegments:3,steps:1});geometry.translate(0,0,-d/2+r);return geometry}
- function box(g,x,y,z,w,h,d,m){const o=new T.Mesh(m.isMeshPhysicalMaterial?rounded(w,h,d):new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;g.add(o);return o}
- function quad(g,pts,m){const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(pts.flat(),3));geo.setIndex([0,1,2,0,2,3]);geo.computeVertexNormals();const o=new T.Mesh(geo,m);o.castShadow=true;o.receiveShadow=true;g.add(o)}
- const paints=[0xe7e8e5,0x555b60,0x272c31,0xd0d1ca,0x344853,0xf0f0e9,0x62696c,0x6f3530];
- const occupied=[...parkingBays,...curvedParkingBays.filter(b=>b.arc&&b.id%2===1)];
- for(let i=0;i<occupied.length;i++){
-  const bay=occupied[i],car=new T.Group();car.name=`Parked car ${bay.id}`;car.position.set(bay.x,bay.s===undefined?ramp.bottom:curvedFloor(bay.s,ramp.bottom),bay.z);car.rotation.y=bay.angle??0;cars.add(car);
-  const paint=new T.MeshPhysicalMaterial({color:paints[i%paints.length],metalness:.52,roughness:.19,clearcoat:1,clearcoatRoughness:.08,envMapIntensity:1.2,side:T.DoubleSide});
-  box(car,0,.56,0,1.78,.35,4.28,trim);box(car,0,.78,0,1.84,.4,4.38,paint);
-  box(car,0,1,-1.5,1.78,.1,1.22,paint);box(car,0,.99,1.68,1.76,.1,.87,paint);
-  const windshield=glass.clone();windshield.side=T.DoubleSide;
-  quad(car,[[-.83,.98,-1.04],[.83,.98,-1.04],[.7,1.51,-.43],[-.7,1.51,-.43]],windshield);
-  quad(car,[[-.7,1.51,-.43],[.7,1.51,-.43],[.7,1.51,.72],[-.7,1.51,.72]],paint);
-  quad(car,[[-.7,1.51,.72],[.7,1.51,.72],[.82,.98,1.29],[-.82,.98,1.29]],windshield);
-  for(const side of [-1,1]){
-   quad(car,[[side*.83,.98,-1.04],[side*.7,1.51,-.43],[side*.7,1.51,.72],[side*.82,.98,1.29]],windshield);
-   box(car,side*.77,1.24,.16,.045,.53,.075,trim);
-   box(car,side*.947,1.08,-.74,.17,.105,.24,paint);
-   box(car,side*.926,.9,.52,.024,.026,.18,rim);
-   for(const z of [-1.35,1.35]){
-    const tire=new T.Mesh(new T.CylinderGeometry(.3,.3,.21,32),rubber);tire.rotation.z=Math.PI/2;tire.position.set(side*.88,.3,z);tire.castShadow=true;car.add(tire);
-    const hub=new T.Mesh(new T.CylinderGeometry(.173,.173,.023,24),trim);hub.rotation.z=Math.PI/2;hub.position.set(side*1.0,.3,z);car.add(hub);
-    const ring=new T.Mesh(new T.TorusGeometry(.172,.022,8,32),rim);ring.rotation.y=Math.PI/2;ring.position.set(side*1.015,.3,z);car.add(ring);
-    const spokes=new T.InstancedMesh(new T.BoxGeometry(.024,.31,.024),rim,5),matrix=new T.Matrix4(),q=new T.Quaternion();for(let k=0;k<5;k++){q.setFromEuler(new T.Euler(k*Math.PI/5,0,0));matrix.compose(new T.Vector3(side*1.021,.3,z),q,new T.Vector3(1,1,1));spokes.setMatrixAt(k,matrix)}spokes.computeBoundingSphere();car.add(spokes);
-   }
-   box(car,side*.61,.85,-2.205,.48,.135,.032,headlight);box(car,side*.66,.86,2.205,.35,.16,.032,tail);
+
+// A locally hosted, licensed glTF car, with shared geometry and three levels
+// of detail. Body, glass, interior, brakes and wheels remain real 3D surfaces.
+let templates;
+export async function prepareCarAssets(){
+ if(templates)return;
+ const response=await fetch('assets/vehicles/grand-tourer.glb');
+ if(!response.ok)throw Error('Vehicle model could not be loaded');
+ const gltf=await new GLTFLoader().parseAsync(await response.arrayBuffer(),'');
+ templates=gltf.scenes;
+ if(templates.length!==3)throw Error('Missing vehicle detail levels');
+}
+const colors=[0xe7e8e4,0x30343a,0x173c53,0xb9c0c3,0x74332e,0xf0e7d5,0x49605c,0x847266];
+function carMaterials(index){
+ const cache=new Map(),brakes=[];
+ const materialFor=original=>{
+  if(cache.has(original.uuid))return cache.get(original.uuid);
+  const m=original.clone(),name=m.name;
+  if(name.startsWith('Paint 1')){m.color.setHex(colors[index%colors.length]);m.metalness=.58;m.roughness=.23;m.clearcoat=1;m.clearcoatRoughness=.09;m.normalMap=null;m.envMapIntensity=1.15}
+  if(name.startsWith('Paint 2')){m.color.setHex(index%4===0?0x434a4d:0x171b1e);m.metalness=.55;m.roughness=.29;m.clearcoat=.65}
+  if(name==='Glass'){m.transmission=0;m.transparent=true;m.opacity=.38;m.color.setHex(0x81949e);m.metalness=.12;m.roughness=.07;m.clearcoat=1;m.depthWrite=false;m.side=T.DoubleSide;m.userData.reflectionSurface=true}
+  if(name.startsWith('Interior 3')){m.color.setHex(index%3===0?0xb7a18b:0x34383c);m.roughness=.65}
+  if(name==='Rim2'){m.color.setHex(0xb4b9bd);m.metalness=.92;m.roughness=.25}
+  if(name==='Brake'){m.color.setHex(index%3===1?0xb39650:0x6f2221);m.roughness=.35}
+  if(name==='License'){m.map=null;m.color.setHex(0xe5e8e5);m.roughness=.5}
+  if(name==='Headlight')m.emissiveIntensity=.7;
+  if(name==='Brakelight'){m.emissiveIntensity=.22;brakes.push(m)}
+  for(const texture of [m.map,m.normalMap,m.roughnessMap,m.metalnessMap,m.aoMap])if(texture){texture.minFilter=T.LinearMipmapLinearFilter;texture.magFilter=T.LinearFilter}
+  cache.set(original.uuid,m);return m;
+ };
+ return {materialFor,brakes};
+}
+function createCarVisual(index){
+ const lod=new T.LOD(),rigs=[],materials=carMaterials(index);
+ for(const [level,template] of templates.entries()){
+  const model=template.clone(true);model.name='Detail auta '+level;
+  model.traverse(o=>{if(!o.isMesh)return;o.material=materials.materialFor(o.material);o.castShadow=!o.material.transparent;o.receiveShadow=true});
+  const wheels=[];
+  for(const group of [...model.children[0].children])if(group.userData.vehiclePart&&group.userData.vehiclePart!=='body'){
+   const spin=new T.Group();spin.name='Otáčanie pneumatiky';
+   for(const child of [...group.children])if(!child.userData.caliper)spin.add(child);
+   group.add(spin);wheels.push({steer:group,spin,front:group.userData.front,radius:group.userData.wheelRadius});
   }
-  box(car,0,.62,-2.208,.79,.13,.025,trim);box(car,0,.63,2.211,.31,.085,.025,rim);
-  car.userData={bay:bay.id,width:2.02,length:4.44,height:1.56};
+  rigs.push(wheels);lod.addLevel(model,[0,14,38][level],.12);
+ }
+ // Explicit initial visibility also prevents all levels casting the first shadow.
+ lod.levels.forEach((level,i)=>level.object.visible=i===0);
+ let roll=0,steering=0;
+ const update=(distance,turn,braking,dt)=>{
+  roll-=distance/(rigs[0][0]?.radius||.34);steering=T.MathUtils.damp(steering,turn*.46,12,dt);
+  for(const wheels of rigs)for(const wheel of wheels){wheel.spin.rotation.x=roll;wheel.steer.rotation.y=wheel.front?steering:0}
+  for(const m of materials.brakes)m.emissiveIntensity=braking?1.8:.22;
+ };
+ return {lod,rigs,update};
+}
+export function buildParkedCars(){
+ if(!templates)throw Error('Vehicle assets must load before creating parking');
+ const cars=new T.Group();cars.name='Cars in covered parking';cars.userData.location='Recessed parking';
+ const occupied=[...parkingBays,...curvedParkingBays.filter(b=>b.arc&&b.id%2===1)];
+ for(const [index,bay] of occupied.entries()){
+  const car=new T.Group(),visual=createCarVisual(index);car.name=`Parked car ${bay.id}`;
+  car.position.set(bay.x,bay.s===undefined?ramp.bottom:curvedFloor(bay.s,ramp.bottom),bay.z);car.rotation.y=bay.angle??0;car.add(visual.lod);cars.add(car);
+  car.userData={bay:bay.id,width:2.02,length:4.42,height:1.17,detailLevels:visual.lod,vehicleRigs:visual.rigs,updateVehicle:visual.update,model:'Car Concept · Eric Chadwick / DGG'};
  }
  return cars;
 }
