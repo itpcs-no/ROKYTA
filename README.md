@@ -36,8 +36,12 @@ Export ani push do GitHubu nemení existujúcu publikovanú prehliadku; automati
 - Vonkajší bazén 20 × 4 m pri severnom múre s teleskopickým zasúvacím zastrešením (prepínač v paneli).
 - Peší výstup z areálu presunutý do stredu severného múru, v osi budovy, s chodníkom k centrálnej hale.
 - Vnútorné wellness v západnom konci prízemia: telocvičňa (bežecký pás, rotoped, činky), sauna, parná kúpeľ, sprchy; dvere na terasu bazéna.
-- Kancelária správcu v bývalej miestnosti 1.22 pri byte namiesto bazéna.
-- Pivnica pod predným blokom, vstup popri recepcii: vinotéka, cigar bar s vlastným odsávaním, archív vín, WC, technika.
+- Fitness na západnom konci prízemia: kardio (bežecký pás, rotoped), posilňovacie stroje, suchá a parná sauna, sprchy; vonkajšia vírivka a ochladzovací bazén zrušené.
+- Byt vedľa fitness oddelený, s vlastným vstupom z juhu.
+- Pivnica pod garážou: vinotéka a cigar bar (37 m²), vínny sklad (14 m²), WC, schodisko k bytu správcu; chodba od recepcie popri západnej stene predného bloku.
+- Byt správcu nad pivnicou s kanceláriou 10 m² pri vchode.
+- Tri centrálne vstupy A (sever), B (západ), C (východ) do spoločnej haly.
+- Zoznam apartmánov s užívateľskými plochami a rozmermi; kliknutím na mapku sa apartmány zafarbia a zobrazí sa detail.
 - Predzáhradky bytov na prízemí (šírka bytu, hĺbka 3,5–5 m).
 - Vrstva inštalácií (röntgen): inštalačné šachty umiestnené optimalizáciou dĺžky prípojok, kanalizácia, voda, vetranie; dlhé prípojky nad 6 m označené oranžovo.
 - Les okolo areálu podľa leteckých fotografií, realistickejšia postava chodca, viac typov áut (mestské auto, hatchback, sedan, kombi, SUV, MPV).

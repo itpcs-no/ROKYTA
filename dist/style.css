@@ -15,3 +15,16 @@ button,select{border-radius:8px}.active,#startWalk{background:#2b4b3e;border-col
 @media(prefers-reduced-motion:no-preference){button{transition:background .16s,box-shadow .16s}.panel.open{animation:panel-appear .18s ease-out}@keyframes panel-appear{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}}
 
 @media(max-width:380px){#panelToggle{max-width:118px;padding:8px;font-size:12px}.brand div span{display:none}.view-shortcuts button{padding:8px 9px}}
+
+#map{position:relative}#apmap{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;image-rendering:pixelated;opacity:0;transition:opacity .2s}#map.showunits #apmap{opacity:1}
+#apcard{margin-top:8px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.96);color:#1d2528;box-shadow:0 6px 20px rgba(0,0,0,.18);font-size:13px;position:relative;max-height:42vh;overflow:auto}
+#apcard[hidden]{display:none}#apcard strong{font-size:15px;display:block;margin-right:24px}#apcard span{color:#5b6669}.apbig{font-size:22px;font-weight:700;margin:6px 0 0}.apdims{color:#5b6669;margin-bottom:6px}
+#apcard table{width:100%;border-collapse:collapse}#apcard td{padding:3px 0;border-top:1px solid #e3e7e8}#apcard td:last-child{text-align:right;white-space:nowrap}
+.apswatch{position:absolute;right:38px;top:12px;width:16px;height:16px;border-radius:4px}.apclose{position:absolute;right:8px;top:6px;border:0;background:none;font-size:20px;cursor:pointer;color:#5b6669}
+.apwalk{margin-top:8px;width:100%}
+#apartmentTotal{font-size:13px;line-height:1.45;margin:6px 0 8px}#apartmentList{display:grid;gap:3px}
+.apfloor{font-weight:700;font-size:12px;letter-spacing:.04em;text-transform:uppercase;margin:8px 0 2px;opacity:.75}
+.aprow{display:grid;grid-template-columns:14px 52px 1fr auto auto;gap:8px;align-items:center;text-align:left;padding:5px 8px;font-size:12.5px}
+.aprow i{width:12px;height:12px;border-radius:3px}.aprow em{font-style:normal;font-weight:700;white-space:nowrap}.aprow span:nth-of-type(2){opacity:.7;white-space:nowrap}.aprow.active{outline:2px solid currentColor}
+.apnote{font-size:12px;opacity:.75}
+@media (max-width:760px){.aprow{grid-template-columns:12px 46px 1fr auto}.aprow span:nth-of-type(2){display:none}}
