@@ -78,7 +78,7 @@ export function closestRoad(x,z,road){
 export function sitePavedHeight(x,z,level){
  for(const g of entrances){const p=entrancePocket(g);if(x>=p.x0&&x<=p.x1&&z>=p.z0&&z<=p.z1)return entranceHeight(g,level)}
  // Apron, side entrance to existing covered parking, and pedestrian exit.
- if(inSitePolygon(x,z,servicePaving)||(x>=-48.6&&x<=37&&z>=-9.95&&z<=-5.65)||(x>=-37&&x<=-35&&z>=-49&&z<=-43.5))return .06;
+ if(inSitePolygon(x,z,servicePaving)||(x>=-48.6&&x<=37&&z>=-9.95&&z<=-5.65)||inSitePolygon(x,z,northExitPath))return .06;
  for(const road of siteRoads(level)){const p=closestRoad(x,z,road);if(p.distance<=road.width/2+.001)return p.height}
  return null;
 }
@@ -102,10 +102,16 @@ export function siteShoulderHeight(x,z,level){
  }
  return y;
 }
+// Pedestrian exit on the building axis, as on the supplied documents: a 2.2 m
+// wicket gate in the middle of the north wall with a straight paved path to
+// the central hall's north entrance and a small entrance plaza.
+export const northExit={x:0,z:-48,width:2.2};
+export const northExitPath=[[-1.1,-49.2],[1.1,-49.2],[1.1,-23.6],[4.4,-23.6],[4.4,-21.9],[-4.4,-21.9],[-4.4,-23.6],[-1.1,-23.6]];
 export const siteBoundary=[
  {points:[[44,27.2],[44,secondaryEntrance.z+3.3]],type:'wall'},
- {points:[[44,secondaryEntrance.z-3.3],[44,-41],[33,-48],[-35,-48]],type:'wall'},
- {points:[[-37,-48],[-59,-48],[-66,-40],[-66,25],[-64,35],[-65,72]],type:'fence'},
+ {points:[[44,secondaryEntrance.z-3.3],[44,-41],[33,-48],[northExit.x+northExit.width/2,-48]],type:'wall'},
+ {points:[[northExit.x-northExit.width/2,-48],[-45,-48]],type:'wall'},
+ {points:[[-45,-48],[-59,-48],[-66,-40],[-66,25],[-64,35],[-65,72]],type:'fence'},
  {points:[[-65,72],[-58,86],[31,86],[43,76],[45,42],[44,33.8]],type:'fence'}
 ];
 export const boundarySegments=siteBoundary.flatMap(part=>part.points.slice(1).map((p,i)=>({a:part.points[i],b:p,type:part.type})));

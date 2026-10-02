@@ -30,3 +30,21 @@ Posledný príkaz je určený pre prázdny cieľový repozitár. Nepoužívaj fo
 Export zachytáva commit c176fd4 (zariadenie obytných podlaží podľa pôdorysov).
 Zdrojové licenčné poznámky k použitým knižniciam, vozidlám a materiálom zostali zachované v dist/assets.
 Export ani push do GitHubu nemení existujúcu publikovanú prehliadku; automatické nasadzovanie treba nastaviť osobitne.
+
+## Zmeny v tejto verzii
+
+- Vonkajší bazén 20 × 4 m pri severnom múre s teleskopickým zasúvacím zastrešením (prepínač v paneli).
+- Peší výstup z areálu presunutý do stredu severného múru, v osi budovy, s chodníkom k centrálnej hale.
+- Vnútorné wellness v západnom konci prízemia: telocvičňa (bežecký pás, rotoped, činky), sauna, parná kúpeľ, sprchy; dvere na terasu bazéna.
+- Kancelária správcu v bývalej miestnosti 1.22 pri byte namiesto bazéna.
+- Pivnica pod predným blokom, vstup popri recepcii: vinotéka, cigar bar s vlastným odsávaním, archív vín, WC, technika.
+- Predzáhradky bytov na prízemí (šírka bytu, hĺbka 3,5–5 m).
+- Vrstva inštalácií (röntgen): inštalačné šachty umiestnené optimalizáciou dĺžky prípojok, kanalizácia, voda, vetranie; dlhé prípojky nad 6 m označené oranžovo.
+- Les okolo areálu podľa leteckých fotografií, realistickejšia postava chodca, viac typov áut (mestské auto, hatchback, sedan, kombi, SUV, MPV).
+
+## Zverejnenie (GitHub Pages)
+
+Vetva `gh-pages` obsahuje obsah priečinka `dist`. V Settings → Pages nastav Source: Deploy from a branch, Branch: `gh-pages`, priečinok `/ (root)`.
+Pre vlastnú doménu rokyta.eu nastav DNS (A: 185.199.108.153, 185.199.109.153, 185.199.110.153, 185.199.111.153; AAAA: 2606:50c0:8000::153, 2606:50c0:8001::153, 2606:50c0:8002::153, 2606:50c0:8003::153; CNAME www → itpcs-no.github.io) a potom v Settings → Pages zadaj Custom domain `rokyta.eu` a zapni Enforce HTTPS.
+
+Kontrolný snímok bez tieňov a odrazov: `index.html#snapshot=x,y,z,tx,ty,tz` (voliteľne `&ui=idTlačidla`).

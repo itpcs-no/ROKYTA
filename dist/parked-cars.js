@@ -3,6 +3,7 @@ import {GLTFLoader} from './assets/loaders/GLTFLoader.js';
 import {parkingBays} from './parking-layout.js';
 import {ramp} from './project-geometry.js';
 import {curvedParkingBays,curvedFloor} from './curved-parking-layout.js';
+import {createGenericCar,carKindCycle} from './car-variants.js';
 
 // A locally hosted, licensed glTF car, with shared geometry and three levels
 // of detail. Body, glass, interior, brakes and wheels remain real 3D surfaces.
@@ -63,9 +64,10 @@ export function buildParkedCars(){
  const cars=new T.Group();cars.name='Cars in covered parking';cars.userData.location='Recessed parking';
  const occupied=[...parkingBays,...curvedParkingBays.filter(b=>b.arc&&b.id%2===1)];
  for(const [index,bay] of occupied.entries()){
-  const car=new T.Group(),visual=createCarVisual(index);car.name=`Parked car ${bay.id}`;
+  const kind=carKindCycle[index%carKindCycle.length],visual=kind==='gt'?{...createCarVisual(index),width:2.02,length:4.42,height:1.17,model:'Car Concept · Eric Chadwick / DGG'}:createGenericCar(kind,colors[(index*3+1)%colors.length],index);
+  const car=new T.Group();car.name=`Parked car ${bay.id}`;
   car.position.set(bay.x,bay.s===undefined?ramp.bottom:curvedFloor(bay.s,ramp.bottom),bay.z);car.rotation.y=bay.angle??0;car.add(visual.lod);cars.add(car);
-  car.userData={bay:bay.id,width:2.02,length:4.42,height:1.17,detailLevels:visual.lod,vehicleRigs:visual.rigs,updateVehicle:visual.update,model:'Car Concept · Eric Chadwick / DGG'};
+  car.userData={bay:bay.id,width:visual.width,length:visual.length,height:visual.height,detailLevels:visual.lod,vehicleRigs:visual.rigs,updateVehicle:visual.update,model:visual.model};
  }
  return cars;
 }

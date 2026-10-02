@@ -1,5 +1,10 @@
 import {buildApartmentFurnishings,furnishingsBarrierAt} from './apartment-furnishings.js';
 import {applyPoolApartment,buildPoolApartment,apartmentBarrierAt} from './pool-apartment.js';
+import {applyIndoorWellness,buildIndoorWellness,indoorWellnessBarrierAt,indoorWellness} from './indoor-wellness.js';
+import {applyWineCellar,buildWineCellar,cellarBarrierAt as wineCellarBarrierAt,cellar as wineCellar} from './wine-cellar.js';
+import {buildFrontGardens,frontGardenBarrierAt} from './front-gardens.js';
+import {buildInstallations} from './installations.js';
+import {buildForest} from './forest.js';
 import {applyCaretakerLayout,buildCaretakerInterior,caretaker,caretakerBarrierAt} from './caretaker-house.js';
 import {createDriving} from './driving.js';
 import {prepareCarAssets} from './parked-cars.js';
@@ -26,7 +31,7 @@ const $=id=>document.getElementById(id), view=$('view');
 try{await start()}catch(e){$('loading').style.display='block';$('loading').textContent='Model sa nepodarilo načítať. Skús obnoviť stránku v prehliadači s podporou WebGL.';console.error(e)}
 async function start(){
 const [furnishingData,data]=await Promise.all([fetch('./assets/furniture-layout.json').then(r=>{if(!r.ok)throw Error('furniture layout');return r.json()}),fetch('./assets/model.json').then(r=>{if(!r.ok)throw Error('model');return r.json()}),prepareCarAssets()]);
-data.forEach((level,i)=>level.base=levels[i]);applyCaretakerLayout(data);applyPoolApartment(data);
+data.forEach((level,i)=>level.base=levels[i]);applyCaretakerLayout(data);applyPoolApartment(data);applyIndoorWellness(data);applyWineCellar(data);
 const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;renderer.setClearColor(0xdce6eb);view.append(renderer.domElement);renderer.outputColorSpace=T.SRGBColorSpace;
 const scene=new T.Scene();const camera=new T.PerspectiveCamera(48,innerWidth/innerHeight,.35,1600);const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.maxDistance=150;controls.minDistance=2;controls.maxPolarAngle=Math.PI*.49;controls.target.set(0,3,-3);
 const daylight=addDaylight(scene,renderer);const renderQuality=createRenderQuality(renderer);let atmosphereTime=0;
@@ -35,8 +40,8 @@ $('quality').onchange=()=>{renderQuality.setQuality($('quality').value);const si
 const mat=surface('plaster'),sideMat=mat,slabMat=surface('paving'),glassMat=glassMaterial(),frameMat=new T.MeshStandardMaterial({color:0x30383b,metalness:.72,roughness:.3});
 function box(g,x,y,z,w,h,d,m){const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),m);mesh.position.set(x,y,z);mesh.castShadow=!m.transparent;mesh.receiveShadow=true;g.add(mesh);return mesh}
 const ground=box(scene,0,-.5,0,210,.5,190,new T.MeshStandardMaterial({color:0xbccbc2,roughness:1}));const grid=new T.GridHelper(160,32,0xb1c1be,0xc5d1cc);grid.position.y=-.235;scene.add(grid);
-const exterior=buildExterior();scene.add(exterior);
-const groups=[],floorMeshes=[],roofMeshes=[],doorPivots=[];
+const exterior=buildExterior();scene.add(exterior);const frontGardens=buildFrontGardens();scene.add(frontGardens);const forest=buildForest();scene.add(forest);const installations=buildInstallations(data,furnishingData);scene.add(installations);
+const groups=[],floorMeshes=[],roofMeshes=[],doorPivots=[],extraInteriors=[];
 const doorMat=surface('wood'),jambMat=new T.MeshStandardMaterial({color:0xe1dfd7,roughness:.58}),handleMat=new T.MeshStandardMaterial({color:0x899399,metalness:.9,roughness:.22});
 const loader=new T.TextureLoader();const textures=[];const curtainMat=new T.MeshStandardMaterial({color:0xe6e1d3,roughness:1,side:T.DoubleSide});curtainMat.name='Ľanové záclony';
 for(let f=0;f<4;f++){
@@ -81,7 +86,7 @@ for(let f=0;f<4;f++){
   floorMeshes[f].push(slab);
  }
  group.add(buildApartmentFurnishings(f,furnishingData.floors[f]));
- if(f===0)group.add(buildPoolApartment());
+ if(f===0){group.add(buildPoolApartment());const extra=[buildIndoorWellness(),buildWineCellar()];for(const g of extra){group.add(g);extraInteriors.push(g)}}
  if(f===1)group.add(buildCaretakerInterior());
  const geo=new T.PlaneGeometry(62,52);geo.rotateX(-Math.PI/2);const plan=new T.Mesh(geo,new T.MeshBasicMaterial({map:texture,transparent:true,opacity:.94,depthWrite:false}));plan.position.set(.175,.016,0);plan.visible=false;group.add(plan);group.userData.plan=plan;
 }
@@ -90,6 +95,8 @@ let selected='all', mode='orbit', yaw=0,pitch=-.45,walkDistance=5.5,keys={},drag
 function setDoors(){renderer.shadowMap.needsUpdate=true;doorPivots.forEach(p=>p.rotation.y=$('doors').checked?p.userData.opened:p.userData.closed);exterior.userData.parkingStorage.userData.setDoors($('doors').checked);exterior.userData.homes.userData.setDoors($('doors').checked)}
 $('doors').onchange=setDoors;
 $('gate').onchange=()=>{exterior.userData.site.userData.setGate($('gate').checked);renderer.shadowMap.needsUpdate=true};
+$('poolCover').onchange=()=>exterior.userData.wellness.userData.setEnclosureOpen($('poolCover').checked);
+$('installations').onchange=()=>{installations.visible=$('installations').checked;const s=installations.userData.summary;if(installations.visible)$('hint').textContent=`Inštalácie: ${s.stacks} inštalačných šácht pre ${s.fixtures} zariaďovacích predmetov, ${Math.round(s.branchLength)} m pripojovacieho potrubia. Oranžovo ${s.longBranches} dlhých prípojok nad 6 m. Hnedá kanalizácia, modrá studená, červená teplá voda, sivé vetranie.`};
 $('secondaryGate').onchange=()=>{exterior.userData.site.userData.setSecondaryGate($('secondaryGate').checked);renderer.shadowMap.needsUpdate=true};
 function status(){walker.root.visible=mode==='walk'&&!driving.active&&$('figure').checked;$('startWalk').textContent=mode==='walk'?'Ukončiť prechádzku':'Prejsť sa s panáčikom';$('status').textContent=`${selected==='all'?'Celá budova':`${selected+1}. NP`} · ${mode==='walk'?'WASD · pohyb':'obhliadka'}`;$('orbit').classList.toggle('active',mode==='orbit');$('walk').classList.toggle('active',mode==='walk');document.body.classList.toggle('walking',mode==='walk')}
 function visibility(){document.body.classList.toggle('has-floor',selected!=='all');renderer.shadowMap.needsUpdate=true;exterior.visible=selected==='all'||mode==='walk';ground.visible=selected!=='all'&&selected!==0;grid.visible=selected!=='all'&&selected!==0;renderer.clippingPlanes=$('cutaway').checked?[new T.Plane(new T.Vector3(0,-1,0),2.55)]:[];for(let f=0;f<4;f++){groups[f].visible=selected==='all'||selected===f||(mode==='walk'&&f<selected);groups[f].userData.plan.visible=$('plan').checked&&selected===f} $('maptitle').textContent=`${(selected==='all'?1:selected)+1}. NP`;$('mapimg').src=`assets/plan${(selected==='all'?1:selected)+1}.png`;status()}
@@ -134,17 +141,23 @@ $('parkingView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway')
 $('cellarsView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(cellarDoors[0].x+cellars.doorWidth/2,cellars.front-1.4,true);yaw=Math.PI;pitch=-.25};
 $('eastCellarsView').onclick=()=>{selected='all';$('floor').value='all';$('cutaway').checked=false;walkAt(eastCellars.x0+eastCellars.pitch/2,eastCellars.front-1.4,true);yaw=Math.PI;pitch=-.25;$('panel').classList.remove('open')};
 $('enterCar').onclick=useCar;
+const cutawayView=(target,position)=>{selected=0;$('floor').value='0';$('cutaway').checked=true;$('plan').checked=false;orbitHome();controls.target.set(...target);camera.position.set(...position);controls.update();visibility();$('panel').classList.remove('open')};
+$('innerWellnessView').onclick=()=>cutawayView([-24.2,0,-18.4],[-17.5,17,-4.5]);
+$('innerWellnessWalk').onclick=()=>{selected=0;$('floor').value='0';$('cutaway').checked=false;$('plan').checked=false;walkAt(indoorWellness.entry.x,indoorWellness.entry.z);yaw=-Math.PI/2;pitch=-.2;$('panel').classList.remove('open')};
+$('cellarView').onclick=()=>cutawayView([1.5,0,7],[4,21,26]);
+$('cellarWalk').onclick=()=>{selected=0;$('floor').value='0';$('cutaway').checked=false;$('plan').checked=false;walkAt(wineCellar.entry.x,wineCellar.entry.z);yaw=Math.PI;pitch=-.15;$('panel').classList.remove('open')};
 const mapped={ArrowUp:'w',ArrowDown:'s',ArrowLeft:'a',ArrowRight:'d'};window.addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;const k=mapped[e.key]||e.key.toLowerCase();if(mode==='walk'&&e.code==='Space'){e.preventDefault();if(!e.repeat&&!driving.active&&jumpOffset===0)jumpVelocity=4.2}if(mode==='walk'&&k==='e'&&!e.repeat){e.preventDefault();useCar()}keys[k]=true;if(mode==='walk'&&['w','a','s','d'].includes(k))e.preventDefault();if(e.key==='Escape')orbitHome()});window.addEventListener('keyup',e=>{keys[mapped[e.key]||e.key.toLowerCase()]=false});window.addEventListener('blur',()=>{keys={};drag=null});document.querySelectorAll('[data-move]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);keys[b.dataset.move]=true};b.onpointerup=b.onpointercancel=()=>keys[b.dataset.move]=false});
 function inside(x,z,p){let c=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const a=p[i],b=p[j];if((a[1]>z)!==(b[1]>z)&&x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])c=!c}return c}
 function canMove(x,z){
  if($('free').checked)return true;
  if(architecturalBarrierAt(x,z,nav.y-1.65))return false;
  if(selected==='all'&&(parkingBarrierAt(x,z,nav.y-1.65,ramp.bottom)||cellarBarrierAt(x,z,nav.y-1.65,$('doors').checked)))return false;
- if(selected==='all'&&(courtBarrierAt(x,z)||wellnessBarrierAt(x,z)))return false;
+ if(selected==='all'&&(courtBarrierAt(x,z)||wellnessBarrierAt(x,z)||frontGardenBarrierAt(x,z)))return false;
  if(selected==='all'&&homeBarrierAt(x,z,$('doors').checked))return false;
  if(selected==='all'&&siteBarrierAt(x,z,$('gate').checked,$('secondaryGate').checked))return false;
  const floor=selected==='all'?(nav.y-1.65>2.5?1:0):selected;
  if(furnishingsBarrierAt(x,z,nav.y-1.65)||caretakerBarrierAt(x,z,nav.y-1.65)||apartmentBarrierAt(x,z,nav.y-1.65))return false;
+ if(floor===0&&(indoorWellnessBarrierAt(x,z,nav.y-1.65)||wineCellarBarrierAt(x,z,nav.y-1.65)))return false;
  if(selected!=='all'){
   let supported=footprints[floor].some(([a,b,c,d])=>x>=a+.15&&x<=c-.15&&z>=b+.15&&z<=d-.15);
   if(floor===2)supported ||= inside(x,z,exterior.userData.deckOutline);
@@ -180,8 +193,8 @@ function keepCoveredCamera(eyeY){
  camera.lookAt(cameraTarget);
 }
 finishSurfaces(scene,renderer);
-function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderQuality.resize()}window.addEventListener('resize',resize);setDoors();visibility();orbitHome();if(renderer.isWebGLRenderer){$('loading').textContent='Dokončujem materiály a odrazy…';await Promise.all([waitForSurfaceImages(),daylight.ready]);addSceneReflections(scene,renderer);renderer.shadowMap.needsUpdate=true}const batching=groups.map((group,i)=>batchStaticMeshes(group,[...floorMeshes[i],group.userData.plan]));batching.push(batchStaticMeshes(exterior));const shelter=exterior.userData.site.userData.pavilion;shelter.userData.batching=batchStaticMeshes(shelter);const curved=exterior.userData.parkingStorage.userData.curved;curved.children.filter(o=>o.isGroup).forEach(g=>batchStaticMeshes(g));curved.userData.batching=batchStaticMeshes(curved);scene.userData.batching=batching;$('loading').style.display='none';renderer.setAnimationLoop(()=>{
- const dt=Math.min(clock.getDelta(),.05);atmosphereTime+=dt;updateSurfaceTime(atmosphereTime);exterior.userData.wellness.userData.update(dt);
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderQuality.resize()}window.addEventListener('resize',resize);setDoors();visibility();orbitHome();const snapshot=location.hash.startsWith('#snapshot');if(snapshot){renderer.shadowMap.enabled=false}if(renderer.isWebGLRenderer){$('loading').textContent='Dokončujem materiály a odrazy…';await Promise.all([waitForSurfaceImages(),daylight.ready]);if(!snapshot)addSceneReflections(scene,renderer);renderer.shadowMap.needsUpdate=true}const batching=groups.map((group,i)=>batchStaticMeshes(group,[...floorMeshes[i],group.userData.plan]));batching.push(batchStaticMeshes(exterior));const shelter=exterior.userData.site.userData.pavilion;shelter.userData.batching=batchStaticMeshes(shelter);const curved=exterior.userData.parkingStorage.userData.curved;curved.children.filter(o=>o.isGroup).forEach(g=>batchStaticMeshes(g));curved.userData.batching=batchStaticMeshes(curved);for(const g of [...extraInteriors,frontGardens])g.userData.batching=batchStaticMeshes(g);scene.userData.batching=batching;$('loading').style.display='none';if(snapshot){const q=new URLSearchParams(location.hash.slice(1)),ui=q.get('ui');for(const id of (ui||'').split(',').filter(Boolean)){const el=$(id);if(el.type==='checkbox'){el.checked=!el.checked;el.onchange?.()}else el.onclick()}if(mode==='walk'){walker.root.visible=true;walker.root.position.set(nav.x,nav.y-1.65,nav.z);walker.root.rotation.y=yaw;walker.animate(1,true);walker.animate(1.18,true);camera.position.set(nav.x+Math.sin(yaw)*2.6+.9,nav.y+.15,nav.z+Math.cos(yaw)*2.6);camera.lookAt(nav.x,nav.y-.55,nav.z)}const v=q.get('snapshot')?.split(',').map(Number);if(v?.length===6){camera.position.set(v[0],v[1],v[2]);controls.target.set(v[3],v[4],v[5]);controls.update()}renderer.setPixelRatio(1);renderer.render(scene,camera);document.title='SNAPSHOT-READY';return}renderer.setAnimationLoop(()=>{
+ const dt=Math.min(clock.getDelta(),.05);atmosphereTime+=dt;updateSurfaceTime(atmosphereTime);exterior.userData.wellness.userData.update(dt);if(exterior.userData.wellness.userData.enclosureMoving)renderer.shadowMap.needsUpdate=true;
  if(mode==='walk'){
   if(selected==='all')nav.y=exteriorHeight(nav.x,nav.z,nav.y-1.65)+1.65;
   const f=(keys.w?1:0)-(keys.s?1:0),r=(keys.d?1:0)-(keys.a?1:0),norm=Math.hypot(f,r)||1,speed=(keys.shift?6:2.7)*dt/norm;

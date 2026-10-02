@@ -3,7 +3,7 @@ import {surface} from './surface-materials.js';
 import {makeWaterMaterial,addPoolCaustics} from './water-material.js';
 import {createPlanting} from './planting.js';
 import {rectOutline} from './surface-geometry.js';
-import {wellnessLevel,wellnessOutline,wellnessBasins,wellnessLoungers,wellnessPergola,wellnessPosts,wellnessBeds,wellnessTrees,wellnessLights,basinOutline} from './wellness-layout.js';
+import {wellnessLevel,wellnessOutline,wellnessBasins,wellnessLoungers,wellnessPergola,wellnessPosts,wellnessBeds,wellnessTrees,wellnessLights,basinOutline,poolEnclosure,enclosureSegments} from './wellness-layout.js';
 
 export function buildOutdoorWellness(){
  const root=new T.Group();root.name='Vonkajší bazén a záhradné wellness';
@@ -35,7 +35,7 @@ export function buildOutdoorWellness(){
   if(b.id==='swimming'){
    // Broad submerged steps descend from the short end into the main basin.
    for(let i=0;i<6;i++){const top=-.20-i*.22;box(group,cx,(b.bottom+top)/2,b.z1-(i+.5)*.30,b.x1-b.x0,top-b.bottom,.30,tile)}
-   for(const z of [-21,-25.8]){const light=new T.Mesh(new T.SphereGeometry(.075,12,8),lit);light.position.set(b.x0+.025,-.48,z);group.add(light)}
+   for(const z of [-42,-36,-30]){const light=new T.Mesh(new T.SphereGeometry(.075,12,8),lit);light.position.set(b.x0+.025,-.48,z);group.add(light)}
   }else if(b.id==='spa'){
    solid(group,'Podvodná lavica vírivky',basinOutline(b),[basinOutline({...b,radius:.95})],b.bottom,-.55,tile);
    const jetMaterial=new T.MeshStandardMaterial({color:0x899b99,metalness:.72,roughness:.28});
@@ -54,11 +54,12 @@ export function buildOutdoorWellness(){
  const lounge=new T.Group();lounge.name='Pergola a oddychové sedenie';root.add(lounge);
  const p=wellnessPergola;
  for(const {x,z} of wellnessPosts)box(lounge,x,wellnessLevel+1.3,z,.16,2.6,.16,wood);
- for(const z of [p.z0,p.z1])box(lounge,(p.x0+p.x1)/2,2.59,z,p.x1-p.x0+.36,.20,.16,wood);
- for(let x=p.x0-.13;x<=p.x1+.14;x+=.35)box(lounge,x,2.75,(p.z0+p.z1)/2,.12,.12,p.z1-p.z0+.5,wood);
- box(lounge,-39.7,.25,-32.45,5.2,.36,.95,wood);box(lounge,-39.7,.94,-32.85,5.2,.5,.13,wood);
- for(let i=0;i<5;i++){box(lounge,-41.76+i*1.03,.5,-32.43,.99,.14,.83,fabric);box(lounge,-41.76+i*1.03,.82,-32.79,.99,.54,.16,fabric);box(lounge,-41.76+i*1.03,.78,-32.60,.45,.42,.18,cushion)}
- box(lounge,-39.7,.41,-31.175,1.8,.12,.75,wood);for(const x of [-40.38,-39.02])box(lounge,x,.20,-31.175,.09,.28,.57,metal);
+ for(const x of [p.x0,p.x1])box(lounge,x,2.59,(p.z0+p.z1)/2,.16,.20,p.z1-p.z0+.36,wood);
+ for(let z=p.z0-.13;z<=p.z1+.14;z+=.35)box(lounge,(p.x0+p.x1)/2,2.75,z,p.x1-p.x0+.5,.12,.12,wood);
+ // Sofa against the west planting bed, facing the pool across a low table.
+ box(lounge,-43.08,.25,-30.1,.95,.36,5.2,wood);box(lounge,-43.48,.94,-30.1,.13,.5,5.2,wood);
+ for(let i=0;i<5;i++){const z=-32.16+i*1.03;box(lounge,-43.06,.5,z,.83,.14,.99,fabric);box(lounge,-43.42,.82,z,.16,.54,.99,fabric);box(lounge,-43.23,.78,z,.18,.42,.45,cushion)}
+ box(lounge,-41.88,.41,-30.1,.75,.12,1.8,wood);for(const z of [-30.78,-29.42])box(lounge,-41.88,.20,z,.57,.28,.09,metal);
  const loungers=new T.Group();loungers.name='Ležadlá pri bazéne';root.add(loungers);
  for(const {x,z} of wellnessLoungers){
   box(loungers,x,.31,z,2.08,.12,.78,wood);box(loungers,x-.27,.41,z,1.38,.10,.72,fabric);
@@ -66,6 +67,31 @@ export function buildOutdoorWellness(){
   for(const dx of [-.8,.8])for(const dz of [-.29,.29])box(loungers,x+dx,.17,z+dz,.055,.22,.055,metal);
   box(loungers,x+.84,.70,z,.22,.07,.58,cushion);
  }
+ // Telescopic pool enclosure: anodised aluminium arches, clear polycarbonate,
+ // low steel rails on both coping edges. Segments nest when slid open.
+ const enclosure=new T.Group();enclosure.name='Zasúvacie zastrešenie bazéna';root.add(enclosure);
+ const alu=new T.MeshStandardMaterial({color:0xd5dadb,metalness:.85,roughness:.28});
+ const poly=new T.MeshPhysicalMaterial({color:0xeaf3f5,transparent:true,opacity:.2,roughness:.06,metalness:0,side:T.DoubleSide,depthWrite:false});
+ poly.userData.reflectionSurface=true;
+ const e=poolEnclosure,segmentMeshes=[];
+ for(const x of [e.x-e.width0/2-.06,e.x+e.width0/2+.06])box(enclosure,x,wellnessLevel+.05,(e.z0+e.z1)/2,.1,.1,e.z1-e.z0+.3,alu).name='Koľajnica zastrešenia';
+ for(const seg of enclosureSegments(0)){
+  const g=new T.Group();g.name='Segment zastrešenia '+(seg.i+1);enclosure.add(g);
+  const skin=new T.CylinderGeometry(1,1,seg.z1-seg.z0,32,1,true,-Math.PI/2,Math.PI);skin.rotateX(-Math.PI/2);
+  const shell=new T.Mesh(skin,poly);shell.scale.set(seg.width/2,seg.height,1);shell.position.y=wellnessLevel+.1;shell.castShadow=false;shell.receiveShadow=false;g.add(shell);
+  const ribs=4;for(let r=0;r<ribs;r++){
+   const z=(r/(ribs-1)-.5)*(seg.z1-seg.z0-.08);
+   const pts=Array.from({length:17},(_,k)=>{const a=Math.PI*k/16;return new T.Vector3(Math.cos(a)*seg.width/2,wellnessLevel+.1+Math.sin(a)*seg.height,z)});
+   const rib=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts),24,.035,6,false),alu);rib.castShadow=true;g.add(rib);
+  }
+  for(const sx of [-1,1])box(g,sx*seg.width/2,wellnessLevel+.12,0,.08,.14,seg.z1-seg.z0,alu);
+  if(seg.i===0||seg.i===e.segments-1){
+   const end=new T.Mesh(new T.CircleGeometry(1,32,0,Math.PI),poly);end.scale.set(seg.width/2,seg.height,1);end.position.set(0,wellnessLevel+.1,(seg.i?1:-1)*(seg.z1-seg.z0)/2);g.add(end);
+  }
+  g.position.set(e.x,0,(seg.z0+seg.z1)/2);segmentMeshes.push(g);
+ }
+ let enclosureOpen=0,enclosureTarget=0;
+ const placeEnclosure=()=>{e.open=enclosureOpen;for(const seg of enclosureSegments(enclosureOpen))segmentMeshes[seg.i].position.z=(seg.z0+seg.z1)/2};
  // Recessed planting beds use actual ground openings and meet the terrace edge.
  const planting=createPlanting();
  for(const bed of wellnessBeds){
@@ -81,6 +107,6 @@ export function buildOutdoorWellness(){
  for(const [x,z] of wellnessLights){
   box(root,x,.29,z,.10,.46,.10,metal);box(root,x,.535,z,.14,.045,.14,lit);
  }
- root.userData={deck,waters,basins:wellnessBasins,occluders:lounge.children.filter(o=>o.position.y>2.4),update(dt){time.value+=dt;for(const bubble of bubbles){const d=bubble.userData,t=(time.value*.55+d.phase)%1,a=d.angle+Math.sin(time.value+d.phase)*.025;bubble.position.set(-40.8+Math.cos(a)*d.radius,-.28+t*.21,-14.85+Math.sin(a)*d.radius);bubble.scale.setScalar(.012+.029*t)}}};
+ root.userData={deck,waters,basins:wellnessBasins,enclosure,occluders:lounge.children.filter(o=>o.position.y>2.4),setEnclosureOpen(open,instant=false){enclosureTarget=open?1:0;if(instant){enclosureOpen=enclosureTarget;placeEnclosure()}},get enclosureMoving(){return enclosureOpen!==enclosureTarget},update(dt){time.value+=dt;if(enclosureOpen!==enclosureTarget){const step=dt*.12;enclosureOpen=enclosureTarget>enclosureOpen?Math.min(enclosureTarget,enclosureOpen+step):Math.max(enclosureTarget,enclosureOpen-step);placeEnclosure()}for(const bubble of bubbles){const d=bubble.userData,t=(time.value*.55+d.phase)%1,a=d.angle+Math.sin(time.value+d.phase)*.025;bubble.position.set(-40.8+Math.cos(a)*d.radius,-.28+t*.21,-14.85+Math.sin(a)*d.radius);bubble.scale.setScalar(.012+.029*t)}}};
  root.userData.update(0);return root;
 }
