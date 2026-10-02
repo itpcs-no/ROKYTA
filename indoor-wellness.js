@@ -2,7 +2,7 @@ import * as T from 'three';
 import {surface,glassMaterial} from './surface-materials.js';
 import {outsideRectangle} from './caretaker-house.js';
 
-// West end of the long wing, ground floor (former rooms 1.19-1.23 beside the
+// East end of the long wing (model -x), ground floor (former rooms 1.19-1.23 beside the
 // lap pool). Wet rooms sit against the existing sanitary column (1.19-1.21),
 // so sauna, steam generator, showers and floor drains share one short drain
 // run and one ventilation riser. The gym takes the daylit corner by the pool.
@@ -29,8 +29,15 @@ export function applyIndoorWellness(data){
  // The flat beside the fitness gets its own front door from the south walkway;
  // its old door into the fitness corridor is walled up.
  d.doors=d.doors.filter(p=>!(p.name||'').endsWith('· vstup')||!(p.name||'').startsWith('Byt pri bývalom bazéne'));
- d.walls.push(rect(-19.77,-15.42,-19.63,-14.34));
- d.doors.push({name:'Byt pri bývalom bazéne · vlastný vstup',hinge:[-17.6,-10.93],closed:[-16.6,-10.93],open:[-17.6,-11.93],width:1,height:2.25});
+ d.walls.push(rect(-19.77,-16.05,-19.63,-14.3));
+ d.doors=d.doors.filter(p=>!(p.name||'').startsWith('Byt pri bývalom bazéne'));
+ d.doors.push({name:'Byt 1.02 · vlastný vstup',hinge:[-7.3,-10.93],closed:[-6.3,-10.93],open:[-7.3,-11.93],width:1,height:2.25});
+ // Two separate entrances: fitness from the pool terrace (glazed doors), sauna
+ // from the courtyard walkway through hall 1.24; the hall's door into the gym is closed.
+ d.doors=d.doors.filter(p=>!(p.hinge[0]>-25.45&&p.hinge[0]<-24.3&&p.hinge[1]>-15.85&&p.hinge[1]<-15.35));
+ d.walls.push(rect(-25.36,-15.71,-24.34,-15.49));
+ for(const mask of [{x0:-26.55,x1:-25.45,z0:-11.35,z1:-10.6}])d.walls=d.walls.flatMap(p=>outsideRectangle(p,mask));
+ d.doors.push({name:'Wellness · vstup do sauny',hinge:[-26.5,-10.99],closed:[-25.5,-10.99],open:[-26.5,-11.95],width:1,height:2.25});
  const wall=(axis,f,a,b,gaps=[],t=.12)=>{let start=a;for(const [lo,hi] of [...gaps,[b,b]]){if(lo>start)d.walls.push(axis==='x'?rect(start,f-t/2,lo,f+t/2):rect(f-t/2,start,f+t/2,lo));start=hi}};
  const door=(name,hinge,closed,open,height=2.1)=>d.doors.push({name:'Wellness · '+name,hinge,closed,open,width:Math.hypot(closed[0]-hinge[0],closed[1]-hinge[1]),height});
  // Gym | wet zone, with a door at the shower end.

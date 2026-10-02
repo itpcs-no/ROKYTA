@@ -21,10 +21,11 @@ export function applyPoolApartment(data){
  const door=(name,hinge,closed,open)=>d.doors.push({name:'Byt 1.02 · '+name,hinge,closed,open,width:Math.hypot(closed[0]-hinge[0],closed[1]-hinge[1]),height:2.18});
  // Bedroom wing along the north facade.
  wall('x',-14.55,-19.63,-7.85,[[-17.3,-16.4],[-12.9,-12.0],[-9.65,-8.95]]);
- wall('z',-15.0,-14.55,-11.2);wall('z',-10.55,-14.55,-11.2);wall('z',-7.85,-14.55,-11.2);
+ wall('z',-15.0,-14.55,-11.2);wall('z',-10.55,-14.55,-11.2);wall('z',-7.85,-14.55,-11.2,[[-13.9,-13.0]]);
  door('spálňa',[-17.28,-14.55],[-16.42,-14.55],[-17.28,-13.69]);
  door('izba',[-12.88,-14.55],[-12.02,-14.55],[-12.88,-13.69]);
  door('kúpeľňa',[-9.63,-14.55],[-8.97,-14.55],[-9.63,-13.89]);
+ door('technika bazéna',[-7.85,-13.88],[-7.85,-13.02],[-8.71,-13.88]);
 }
 export const apartmentFurniture=[];
 export function apartmentBarrierAt(x,z,y){return y>-.15&&y<2&&apartmentFurniture.some(r=>x>r[0]-.16&&x<r[2]+.16&&z>r[1]-.16&&z<r[3]+.16)};

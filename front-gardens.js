@@ -2,11 +2,13 @@ import * as T from 'three';
 import {surface} from './surface-materials.js';
 import {createPlanting} from './planting.js';
 
-// Private front gardens for every ground-floor flat facing north, each the full
-// width of its flat and 5 m deep, so all end on one line 18.4 m from the wall.
+// Private front gardens for every ground-floor flat on the garden (south) side,
+// each the full width of its flat and 5 m deep: all end on one line 18.4 m from
+// the boundary wall, with a shared walkway beyond them.
 const edge=-24.63;
 export const frontGardens=[
- {name:'Predzáhradka bytu 1.02 (pri fitness)',x0:-19.5,x1:-4.95,depth:5},
+ {name:'Predzáhradka bytu 1.02',x0:-19.5,x1:-4.95,depth:5},
+ {name:'Predzáhradka apartmánu 1.06',x0:-4.6,x1:4.7,depth:5},
  {name:'Predzáhradka apartmánu 1.03',x0:5.0,x1:12.6,depth:5},
  {name:'Predzáhradka apartmánu 1.04',x0:12.7,x1:20.5,depth:5},
  {name:'Predzáhradka apartmánu 1.05',x0:20.6,x1:28.6,depth:5}
@@ -52,12 +54,14 @@ export function buildFrontGardens(){
  return root;
 }
 
-// Three central entrances, all into the communal hall core with the stair and
-// lift: A from the north path, B and C from the walkways either side of hall 1.02.
+// Central entrances. A, the main one, leads from the forecourt into the lobby in
+// the former garage, past the caretaker's office, to the complex, the stair down
+// to the wine bar and the caretaker's flat. B and C open hall 1.02 to the
+// walkways on its east and west sides.
 export const centralEntrances=[
- {id:'A',name:'Vstup A · sever',x:-.35,z:-21.85,out:[0,-1],width:3.2},
- {id:'B',name:'Vstup B · západ',x:-4.78,z:-6.46,out:[-1,0],width:2.6},
- {id:'C',name:'Vstup C · východ',x:4.87,z:-3.4,out:[1,0],width:2.6}
+ {id:'A',name:'Hlavný vstup A · pri kancelárii správcu',x:-2.34,z:18.15,y:2.78,out:[1,0],width:2.4},
+ {id:'B',name:'Vstup B · východ',x:-4.78,z:-6.46,y:0,out:[-1,0],width:2.6},
+ {id:'C',name:'Vstup C · západ',x:4.87,z:-3.4,y:0,out:[1,0],width:2.6}
 ];
 export function buildEntrances(){
  const root=new T.Group();root.name='Centrálne vstupy';
@@ -65,7 +69,7 @@ export function buildEntrances(){
  const glass=new T.MeshPhysicalMaterial({color:0xdfeef2,transparent:true,opacity:.35,roughness:.05});
  const mat=new T.MeshStandardMaterial({color:0x3b3f40,roughness:.95});
  for(const e of centralEntrances){
-  const g=new T.Group();g.name=e.name;root.add(g);const [ox,oz]=e.out,along=ox===0;
+  const g=new T.Group();g.name=e.name;g.position.y=e.y||0;root.add(g);const [ox,oz]=e.out,along=ox===0;
   const depth=1.6,cx=e.x+ox*depth/2,cz=e.z+oz*depth/2,sx=along?e.width:depth,sz=along?depth:e.width;
   const roof=new T.Mesh(new T.BoxGeometry(sx,.03,sz),glass);roof.position.set(cx,2.7,cz);g.add(roof);
   for(const s of [-1,1]){const b=new T.Mesh(new T.BoxGeometry(along?.06:depth,.12,along?depth:.06),steel);b.position.set(along?cx+s*(e.width/2-.05):cx,2.66,along?cz:cz+s*(e.width/2-.05));b.castShadow=true;g.add(b)}
