@@ -103,10 +103,11 @@ export function siteShoulderHeight(x,z,level){
  return y;
 }
 // Pedestrian exit on the building axis, as on the supplied documents: a 2.2 m
-// wicket gate in the middle of the north wall with a straight paved path to
-// the central hall's north entrance and a small entrance plaza.
+// wicket gate in the middle of the south boundary wall (model -z).
 export const northExit={x:0,z:-48,width:2.2};
-export const northExitPath=[[-1.1,-49.2],[1.1,-49.2],[1.1,-23.6],[4.4,-23.6],[4.4,-21.9],[-4.4,-21.9],[-4.4,-23.6],[-1.1,-23.6]];
+// From the gate the path meets a walkway along the outer edge of the front
+// gardens, which continues round the west end of the wing to the courtyard path.
+export const northExitPath=[[-1.1,-49.2],[1.1,-49.2],[1.1,-31.3],[30.3,-31.3],[30.3,-9.9],[28.9,-9.9],[28.9,-29.8],[-30.4,-29.8],[-30.4,-31.3],[-1.1,-31.3]];
 export const siteBoundary=[
  {points:[[44,27.2],[44,secondaryEntrance.z+3.3]],type:'wall'},
  {points:[[44,secondaryEntrance.z-3.3],[44,-41],[33,-48],[northExit.x+northExit.width/2,-48]],type:'wall'},
