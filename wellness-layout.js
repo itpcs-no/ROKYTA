@@ -5,9 +5,7 @@ export const wellnessLevel=.06;
 // A short paved link at x -30.4..-28.85 joins the terrace to the indoor wellness door.
 export const wellnessOutline=[[-43.9,-47.4],[-30.9,-47.4],[-30.4,-46.9],[-30.4,-17.95],[-28.85,-17.95],[-28.85,-15.75],[-30.4,-15.75],[-30.4,-12.5],[-30.9,-12],[-39.3,-12],[-39.3,-9.95],[-41.5,-9.95],[-41.5,-12],[-43.9,-12],[-44.4,-12.5],[-44.4,-27.8],[-46.9,-27.8],[-46.9,-30],[-44.4,-30],[-44.4,-46.9]];
 export const wellnessBasins=[
- {id:'swimming',name:'Vonkajší plavecký bazén 20 × 4 m',x0:-39.4,x1:-35.4,z0:-45.8,z1:-25.8,bottom:-1.5,water:-.10,rim:.32},
- {id:'spa',name:'Zapustená vírivka',x:-40.8,z:-14.85,radius:1.55,bottom:-1.02,water:-.10,rim:.32},
- {id:'plunge',name:'Ochladzovací bazén',x0:-35.8,x1:-33.6,z0:-16.8,z1:-14,bottom:-1.24,water:-.10,rim:.32}
+ {id:'swimming',name:'Vonkajší plavecký bazén 20 × 4 m',x0:-39.4,x1:-35.4,z0:-45.8,z1:-25.8,bottom:-1.5,water:-.10,rim:.32}
 ];
 export const wellnessLoungers=[-43.4,-40.4,-37.4,-34.4,-31.4].map(z=>({x:-32.35,z}));
 export const wellnessPergola={x0:-43.6,x1:-40.6,z0:-33.6,z1:-26.6};
@@ -25,7 +23,7 @@ export const wellnessBeds=[
 export const wellnessTrees=[{x:-45.6,z:-36.5},{x:-29.6,z:-46.4}];
 export const wellnessLights=[[-43.95,-38],[-43.95,-19],[-30.85,-28.5],[-30.85,-15]];
 export const wellnessEntry={x:-40.4,z:-10.6};
-export const wellnessTarget={x:-37.2,y:.3,z:-22.8};
+export const wellnessTarget={x:-37.4,y:.3,z:-34};
 export function inWellnessPolygon(x,z,points=wellnessOutline){let result=false;for(let i=0,j=points.length-1;i<points.length;j=i++){
  const a=points[i],b=points[j];if((a[1]>z)!==(b[1]>z)&&x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])result=!result;
 }return result}

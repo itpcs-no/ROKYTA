@@ -26,6 +26,11 @@ export function applyIndoorWellness(data){
  // bedroom; close them and continue the wall.
  d.doors=d.doors.filter(p=>!(Math.abs(p.hinge[0]+19.635)<.02&&p.hinge[1]<-18&&p.hinge[1]>-21));
  d.walls.push(rect(-19.77,-20.44,-19.63,-19.74),rect(-19.77,-18.84,-19.63,-18.14));
+ // The flat beside the fitness gets its own front door from the south walkway;
+ // its old door into the fitness corridor is walled up.
+ d.doors=d.doors.filter(p=>!(p.name||'').endsWith('· vstup')||!(p.name||'').startsWith('Byt pri bývalom bazéne'));
+ d.walls.push(rect(-19.77,-15.42,-19.63,-14.34));
+ d.doors.push({name:'Byt pri bývalom bazéne · vlastný vstup',hinge:[-17.6,-10.93],closed:[-16.6,-10.93],open:[-17.6,-11.93],width:1,height:2.25});
  const wall=(axis,f,a,b,gaps=[],t=.12)=>{let start=a;for(const [lo,hi] of [...gaps,[b,b]]){if(lo>start)d.walls.push(axis==='x'?rect(start,f-t/2,lo,f+t/2):rect(f-t/2,start,f+t/2,lo));start=hi}};
  const door=(name,hinge,closed,open,height=2.1)=>d.doors.push({name:'Wellness · '+name,hinge,closed,open,width:Math.hypot(closed[0]-hinge[0],closed[1]-hinge[1]),height});
  // Gym | wet zone, with a door at the shower end.
@@ -43,7 +48,7 @@ export function applyIndoorWellness(data){
 export const indoorWellnessFurniture=[];
 export function indoorWellnessBarrierAt(x,z,y){return y>-.15&&y<2&&indoorWellnessFurniture.some(r=>x>r[0]-.15&&x<r[2]+.15&&z>r[1]-.15&&z<r[3]+.15)}
 export function buildIndoorWellness(){
- const g=new T.Group();g.name='Vnútorné wellness, telocvičňa a kancelária správcu';indoorWellnessFurniture.length=0;
+ const g=new T.Group();g.name='Fitness s suchou a parnou saunou';indoorWellnessFurniture.length=0;
  const w=indoorWellness,wood=surface('wood'),tile=surface('paving');
  const cedar=wood.clone();cedar.color.set(0xc79a62);
  const aspen=wood.clone();aspen.color.set(0xe7d0a8);
@@ -70,7 +75,6 @@ export function buildIndoorWellness(){
  {const x=-25.4,z=-20.55;box('Rotoped – rám',x,.38,z,.5,.08,1.1,black,true);box('Rotoped – zotrvačník',x,.36,z-.38,.12,.46,.46,steel);box('Rotoped – stĺpik sedla',x,.68,z+.25,.05,.62,.05,black);box('Rotoped – sedlo',x,1.0,z+.27,.18,.06,.28,rubber);box('Rotoped – riadidlá',x,1.12,z-.32,.5,.05,.06,black);box('Rotoped – stĺpik riadidiel',x,.78,z-.3,.05,.72,.05,black)}
  {const x=-28.0,z=-17.9;box('Stojan na činky',x,.45,z,.42,.9,1.5,steel,true);for(let i=0;i<5;i++)for(const y of [.62,.25]){const zz=z-.6+i*.3;cyl('Jednoručka',x+.02,y,zz,.055+i*.006,.34,black,'x')}}
  {box('Posilňovacia lavica',-26.2,.42,-17.1,.36,.08,1.25,rubber,true);box('Lavica – podstavec',-26.2,.2,-17.1,.1,.36,1.0,black)}
- box('Podložka na cvičenie',-25.1,.036,-17.8,.65,.012,1.85,new T.MeshStandardMaterial({color:0x4f7d7a,roughness:.9}));
  box('Zrkadlová stena telocvične',-23.94,1.3,-18.6,.02,1.8,4.1,mirror);
  box('Televízor v telocvični',-28.25,1.8,-19.0,.05,.55,.95,black);
  // Sauna: cedar lining, two bench tiers, heater with stones, glass door.
@@ -92,11 +96,15 @@ export function buildIndoorWellness(){
   for(let i=0;i<4;i++)box('Uterák',-23.6,1.35,-17.4+i*.33,.28,.06,.28,towel);
   for(const [x,z] of [[-22.8,-17.6],[-21,-16.5]])box('Stropné svetlo',x,2.47,z,.5,.04,.5,lamp)}
  for(const [x,z] of [[-27.2,-19.6],[-25.2,-19.6],[-27.2,-17.3],[-25.2,-17.3]])box('Stropné svetlo telocvične',x,2.47,z,.9,.04,.24,lamp);
- // Caretaker office in former room 1.22, next to the flat and the stair hall.
- {const o=w.office;box('Pracovný stôl správcu',o.x1-.38,.74,-12.6,.7,.05,1.5,wood,true);box('Kontajner stola',o.x1-.38,.33,-12.05,.6,.62,.42,white);
-  box('Monitor',o.x1-.12,1.02,-12.7,.04,.38,.62,black);box('Kancelárska stolička',o.x1-.95,.48,-12.6,.5,.08,.5,black,true);box('Operadlo stoličky',o.x1-1.18,.8,-12.6,.06,.55,.46,black);
-  box('Regál na šanóny',o.x0+.2,1.0,-12.4,.34,2,1.6,white,true);for(let i=0;i<4;i++)box('Šanóny',o.x0+.22,.5+i*.45,-12.4,.3,.3,1.45,new T.MeshStandardMaterial({color:[0x3d5a6c,0x8a6a3a,0x5b6b4f,0x704040][i],roughness:.8}));
-  box('Skrinka s kľúčmi',o.x0+.06,1.55,-13.6,.08,.5,.4,steel);box('Svetlo kancelárie',(o.x0+o.x1)/2,2.47,-12.7,.4,.04,1.2,lamp)}
- g.userData.rooms=['Telocvičňa','Sauna','Parná kúpeľ','Sprchy','Kancelária správcu'];
+ // Former room 1.22: towels, cleaning and the sauna/steam control cabinet.
+ {const o=w.office;box('Regál na uteráky',o.x0+.22,1.0,-12.7,.4,2,2.2,white,true);for(let i=0;i<4;i++)box('Uteráky',o.x0+.24,.45+i*.45,-12.7,.34,.22,2.0,towel);
+  box('Rozvádzač sauny a parného generátora',o.x1-.12,1.3,-13.4,.2,.9,.6,steel,true);box('Parný generátor',o.x1-.25,.4,-12.0,.45,.7,.35,white,true)}
+ // Strength machines: cable station in the gym, leg press and chest press in the stair hall's east bay.
+ function machine(name,x,z,sx,sz,h){box(name+' – rám',x,h/2,z-sz/2+.06,sx,h,.08,black,true);box(name+' – základňa',x,.06,z,sx,.12,sz,black,true);box(name+' – závažia',x+sx/2-.12,h*.42,z-sz/2+.18,.18,h*.7,.14,steel);box(name+' – sedadlo',x,.5,z+.1,.5,.08,.55,rubber);box(name+' – operadlo',x,.85,z+sz/2-.25,.5,.6,.08,rubber);box(name+' – rukoväte',x,1.1,z-.15,sx*.85,.04,.04,steel)}
+ machine('Kladkový posilňovací stroj',-24.75,-18.2,1.3,1.4,2.1);
+ machine('Leg press',-22.8,-13.0,1.0,1.9,1.4);
+ machine('Bench press stroj',-24.2,-12.1,1.1,1.2,1.7);
+ box('Gumená podlaha posilňovne',-23.3,.016,-13.3,2.8,.03,4.1,rubber);
+ g.userData.rooms=['Fitness: kardio a posilňovňa','Suchá sauna','Parná sauna','Sprchy','Sklad wellness'];
  return g;
 }

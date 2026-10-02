@@ -1,8 +1,9 @@
 import {buildApartmentFurnishings,furnishingsBarrierAt} from './apartment-furnishings.js';
 import {applyPoolApartment,buildPoolApartment,apartmentBarrierAt} from './pool-apartment.js';
 import {applyIndoorWellness,buildIndoorWellness,indoorWellnessBarrierAt,indoorWellness} from './indoor-wellness.js';
-import {applyWineCellar,buildWineCellar,cellarBarrierAt as wineCellarBarrierAt,cellar as wineCellar} from './wine-cellar.js';
-import {buildFrontGardens,frontGardenBarrierAt} from './front-gardens.js';
+import {applyWineCellar,buildWineCellar,cellarBarrierAt as wineCellarBarrierAt,cellar as wineCellar,applyCaretakerOffice,buildCaretakerOffice,caretakerOfficeBarrierAt} from './wine-cellar.js';
+import {buildApartmentGuide} from './apartments.js';
+import {buildFrontGardens,frontGardenBarrierAt,buildEntrances} from './front-gardens.js';
 import {buildInstallations} from './installations.js';
 import {buildForest} from './forest.js';
 import {applyCaretakerLayout,buildCaretakerInterior,caretaker,caretakerBarrierAt} from './caretaker-house.js';
@@ -31,7 +32,7 @@ const $=id=>document.getElementById(id), view=$('view');
 try{await start()}catch(e){$('loading').style.display='block';$('loading').textContent='Model sa nepodarilo načítať. Skús obnoviť stránku v prehliadači s podporou WebGL.';console.error(e)}
 async function start(){
 const [furnishingData,data]=await Promise.all([fetch('./assets/furniture-layout.json').then(r=>{if(!r.ok)throw Error('furniture layout');return r.json()}),fetch('./assets/model.json').then(r=>{if(!r.ok)throw Error('model');return r.json()}),prepareCarAssets()]);
-data.forEach((level,i)=>level.base=levels[i]);applyCaretakerLayout(data);applyPoolApartment(data);applyIndoorWellness(data);applyWineCellar(data);
+data.forEach((level,i)=>level.base=levels[i]);applyCaretakerLayout(data);applyPoolApartment(data);applyIndoorWellness(data);applyWineCellar(data);applyCaretakerOffice(data);
 const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;renderer.setClearColor(0xdce6eb);view.append(renderer.domElement);renderer.outputColorSpace=T.SRGBColorSpace;
 const scene=new T.Scene();const camera=new T.PerspectiveCamera(48,innerWidth/innerHeight,.35,1600);const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.maxDistance=150;controls.minDistance=2;controls.maxPolarAngle=Math.PI*.49;controls.target.set(0,3,-3);
 const daylight=addDaylight(scene,renderer);const renderQuality=createRenderQuality(renderer);let atmosphereTime=0;
@@ -40,7 +41,7 @@ $('quality').onchange=()=>{renderQuality.setQuality($('quality').value);const si
 const mat=surface('plaster'),sideMat=mat,slabMat=surface('paving'),glassMat=glassMaterial(),frameMat=new T.MeshStandardMaterial({color:0x30383b,metalness:.72,roughness:.3});
 function box(g,x,y,z,w,h,d,m){const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),m);mesh.position.set(x,y,z);mesh.castShadow=!m.transparent;mesh.receiveShadow=true;g.add(mesh);return mesh}
 const ground=box(scene,0,-.5,0,210,.5,190,new T.MeshStandardMaterial({color:0xbccbc2,roughness:1}));const grid=new T.GridHelper(160,32,0xb1c1be,0xc5d1cc);grid.position.y=-.235;scene.add(grid);
-const exterior=buildExterior();scene.add(exterior);const frontGardens=buildFrontGardens();scene.add(frontGardens);const forest=buildForest();scene.add(forest);const installations=buildInstallations(data,furnishingData);scene.add(installations);
+const exterior=buildExterior();scene.add(exterior);const frontGardens=buildFrontGardens();scene.add(frontGardens);scene.add(buildEntrances());const forest=buildForest();scene.add(forest);const installations=buildInstallations(data,furnishingData);scene.add(installations);
 const groups=[],floorMeshes=[],roofMeshes=[],doorPivots=[],extraInteriors=[];
 const doorMat=surface('wood'),jambMat=new T.MeshStandardMaterial({color:0xe1dfd7,roughness:.58}),handleMat=new T.MeshStandardMaterial({color:0x899399,metalness:.9,roughness:.22});
 const loader=new T.TextureLoader();const textures=[];const curtainMat=new T.MeshStandardMaterial({color:0xe6e1d3,roughness:1,side:T.DoubleSide});curtainMat.name='Ľanové záclony';
@@ -87,6 +88,7 @@ for(let f=0;f<4;f++){
  }
  group.add(buildApartmentFurnishings(f,furnishingData.floors[f]));
  if(f===0){group.add(buildPoolApartment());const extra=[buildIndoorWellness(),buildWineCellar()];for(const g of extra){group.add(g);extraInteriors.push(g)}}
+ if(f===1){const office=buildCaretakerOffice();group.add(office);extraInteriors.push(office)}
  if(f===1)group.add(buildCaretakerInterior());
  const geo=new T.PlaneGeometry(62,52);geo.rotateX(-Math.PI/2);const plan=new T.Mesh(geo,new T.MeshBasicMaterial({map:texture,transparent:true,opacity:.94,depthWrite:false}));plan.position.set(.175,.016,0);plan.visible=false;group.add(plan);group.userData.plan=plan;
 }
@@ -144,7 +146,8 @@ $('enterCar').onclick=useCar;
 const cutawayView=(target,position)=>{selected=0;$('floor').value='0';$('cutaway').checked=true;$('plan').checked=false;orbitHome();controls.target.set(...target);camera.position.set(...position);controls.update();visibility();$('panel').classList.remove('open')};
 $('innerWellnessView').onclick=()=>cutawayView([-24.2,0,-18.4],[-17.5,17,-4.5]);
 $('innerWellnessWalk').onclick=()=>{selected=0;$('floor').value='0';$('cutaway').checked=false;$('plan').checked=false;walkAt(indoorWellness.entry.x,indoorWellness.entry.z);yaw=-Math.PI/2;pitch=-.2;$('panel').classList.remove('open')};
-$('cellarView').onclick=()=>cutawayView([1.5,0,7],[4,21,26]);
+$('cellarView').onclick=()=>cutawayView([-7.6,0,19.6],[-1,16,33]);
+const apartmentGuide=buildApartmentGuide(scene,data,$);apartmentGuide.setWalk((x,z)=>{walkAt(x,z);$('panel').classList.remove('open')});
 $('cellarWalk').onclick=()=>{selected=0;$('floor').value='0';$('cutaway').checked=false;$('plan').checked=false;walkAt(wineCellar.entry.x,wineCellar.entry.z);yaw=Math.PI;pitch=-.15;$('panel').classList.remove('open')};
 const mapped={ArrowUp:'w',ArrowDown:'s',ArrowLeft:'a',ArrowRight:'d'};window.addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;const k=mapped[e.key]||e.key.toLowerCase();if(mode==='walk'&&e.code==='Space'){e.preventDefault();if(!e.repeat&&!driving.active&&jumpOffset===0)jumpVelocity=4.2}if(mode==='walk'&&k==='e'&&!e.repeat){e.preventDefault();useCar()}keys[k]=true;if(mode==='walk'&&['w','a','s','d'].includes(k))e.preventDefault();if(e.key==='Escape')orbitHome()});window.addEventListener('keyup',e=>{keys[mapped[e.key]||e.key.toLowerCase()]=false});window.addEventListener('blur',()=>{keys={};drag=null});document.querySelectorAll('[data-move]').forEach(b=>{b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);keys[b.dataset.move]=true};b.onpointerup=b.onpointercancel=()=>keys[b.dataset.move]=false});
 function inside(x,z,p){let c=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const a=p[i],b=p[j];if((a[1]>z)!==(b[1]>z)&&x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])c=!c}return c}
@@ -158,6 +161,7 @@ function canMove(x,z){
  const floor=selected==='all'?(nav.y-1.65>2.5?1:0):selected;
  if(furnishingsBarrierAt(x,z,nav.y-1.65)||caretakerBarrierAt(x,z,nav.y-1.65)||apartmentBarrierAt(x,z,nav.y-1.65))return false;
  if(floor===0&&(indoorWellnessBarrierAt(x,z,nav.y-1.65)||wineCellarBarrierAt(x,z,nav.y-1.65)))return false;
+ if(floor===1&&caretakerOfficeBarrierAt(x,z,nav.y-1.65))return false;
  if(selected!=='all'){
   let supported=footprints[floor].some(([a,b,c,d])=>x>=a+.15&&x<=c-.15&&z>=b+.15&&z<=d-.15);
   if(floor===2)supported ||= inside(x,z,exterior.userData.deckOutline);

@@ -12,8 +12,8 @@ const extraFixtures=[
  {floor:0,type:'shower',x:-7.32,z:-20.65},{floor:0,type:'vanity',x:-5.24,z:-19.16},{floor:0,type:'wc',x:-5.46,z:-20.8},{floor:0,type:'kitchen',x:-5.21,z:-14.65},
  // Indoor wellness: two showers, steam-room drain, linear drain.
  {floor:0,type:'shower',x:-20.05,z:-18.25},{floor:0,type:'shower',x:-20.05,z:-17.2},{floor:0,type:'drain',x:-20.5,z:-20.2},{floor:0,type:'drain',x:-20.4,z:-16.6},
- // Cellar: WC, washbasin, bar sink.
- {floor:0,type:'wc',x:-6.95,z:-.5},{floor:0,type:'sink',x:-6.9,z:1.35},{floor:0,type:'sink',x:-4.6,z:6.85}
+ // Cellar under the garage: WC and washbasin; caretaker's flat above (bath, kitchen).
+ {floor:0,type:'wc',x:-3.1,z:16.5},{floor:0,type:'sink',x:-4.8,z:16.15},{floor:1,type:'shower',x:-12.2,z:16.6},{floor:1,type:'wc',x:-9.5,z:16.3},{floor:1,type:'kitchen',x:-6.8,z:16.25}
 ];
 const median=(items,key)=>{const s=[...items].sort((a,b)=>a[key]-b[key]),total=s.reduce((a,i)=>a+i.w,0);let acc=0;for(const i of s){acc+=i.w;if(acc>=total/2)return i[key]}return s.at(-1)[key]};
 export function planInstallations(data,furnishing){
@@ -65,9 +65,9 @@ export function buildInstallations(data,furnishing){
   run([[f.x,wy,f.z],[s.x+.16,wy,f.z],[s.x+.16,wy,s.z+.12]],.016,M.cold);
   if(f.type!=='wc'&&f.type!=='drain')run([[f.x,wy+.08,f.z],[s.x+.24,wy+.08,f.z],[s.x+.24,wy+.08,s.z+.12]],.016,M.hot);
  }
- // Cigar-lounge extract and sauna/steam extract to their units.
- run([[7.6,2.4,4.2],[7.6,2.4,13.9],[9.35,2.4,13.9],[9.35,1.8,14.4]],.12,M.vent);
- run([[9.9,2.4,15.1],[9.9,base(2)+3.4,15.1]],.12,M.vent);
+ // Cigar-lounge extract up the garage wall to its roof; sauna/steam extract.
+ run([[-9.7,2.45,22.2],[-12.3,2.45,22.2],[-12.3,2.45,23.1]],.12,M.vent);
+ run([[-12.3,2.45,23.1],[-12.3,base(1)+3.3,23.1]],.12,M.vent);
  run([[-22.6,2.35,-20.2],[-22.6,2.35,-16.4],[-20.3,2.35,-16.4]],.09,M.vent);
  root.userData={plan,summary:plan.summary};
  root.visible=false;return root;
