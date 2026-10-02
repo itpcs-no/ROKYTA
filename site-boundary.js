@@ -3,7 +3,7 @@ import {surface,glassMaterial} from './surface-materials.js';
 import {createPlanting} from './planting.js';
 import {ramp,access,exteriorHeight,gardenPavedAreas} from './project-geometry.js';
 import {courtTerrainHeight} from './court-layout.js';
-import {entrances,secondaryAccess,entranceHeight,entrancePocket,closestRoad,serviceHouse,serviceShed,servicePaving,siteRoads,siteShoulderHeight,roadsideGarden,boundarySegments} from './site-layout.js';
+import {northExit,northExitPath,entrances,secondaryAccess,entranceHeight,entrancePocket,closestRoad,serviceHouse,serviceShed,servicePaving,siteRoads,siteShoulderHeight,roadsideGarden,boundarySegments} from './site-layout.js';
 import {homeRoads} from './homes-layout.js';
 import {buildSocialPavilion} from './social-pavilion.js';
 import {wellnessOutline,wellnessBeds} from './wellness-layout.js';
@@ -38,7 +38,14 @@ export function buildSiteBoundary(){
  }
  solidPolygon(servicePaving,.06,paving,'Spevnený dvor pri vedľajších objektoch');
  subtractTopSurfaces(solidPolygon(cellarLink,.06,paving,'Napojenie kobiek na obvodovú cestu'),[servicePaving]);
- solidPolygon([[-37,-49],[-35,-49],[-35,-43.5],[-37,-43.5]],.06,paving,'Peší výstup z areálu');
+ solidPolygon(northExitPath,.06,paving,'Peší výstup z areálu v osi budovy');
+ {// Wicket gate: steel frame with vertical bars, matching the boundary metalwork.
+  const gate=new T.Group();gate.name='Branka pešieho výstupu';root.add(gate);const w=northExit.width-.24;
+  for(const sx of [-1,1])box(northExit.x+sx*(northExit.width/2-.06),1.05,northExit.z,.14,2.1,.14,dark,gate);
+  box(northExit.x,1.92,northExit.z,w,.06,.05,dark,gate);box(northExit.x,.16,northExit.z,w,.06,.05,dark,gate);
+  for(let x=-w/2+.09;x<w/2;x+=.12)box(northExit.x+x,1.04,northExit.z,.022,1.72,.022,dark,gate);
+  box(northExit.x+w/2-.18,1.05,northExit.z+.05,.05,.12,.04,silver,gate);
+ }
  // Graded grass shoulders: no suspended asphalt sheets or exposed open undersides.
  const g=roadsideGarden,tp=[],ti=[],grid=new Map();
  const xs=[...new Set([...Array.from({length:Math.ceil(125/.6)+1},(_,i)=>-66+i*.6),g.x0-g.blend,g.x0,g.x1,g.x1+g.blend,secondaryAccess.x-secondaryAccess.width/2,secondaryAccess.x+secondaryAccess.width/2])].sort((a,b)=>a-b);
