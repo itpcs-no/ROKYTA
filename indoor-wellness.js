@@ -31,7 +31,7 @@ export function applyIndoorWellness(data){
  d.doors=d.doors.filter(p=>!(p.name||'').endsWith('· vstup')||!(p.name||'').startsWith('Byt pri bývalom bazéne'));
  d.walls.push(rect(-19.77,-16.05,-19.63,-14.3));
  d.doors=d.doors.filter(p=>!(p.name||'').startsWith('Byt pri bývalom bazéne'));
- d.doors.push({name:'Byt 1.02 · vlastný vstup',hinge:[-7.3,-10.93],closed:[-6.3,-10.93],open:[-7.3,-11.93],width:1,height:2.25});
+
  // Two separate entrances: fitness from the pool terrace (glazed doors), sauna
  // from the courtyard walkway through hall 1.24; the hall's door into the gym is closed.
  d.doors=d.doors.filter(p=>!(p.hinge[0]>-25.45&&p.hinge[0]<-24.3&&p.hinge[1]>-15.85&&p.hinge[1]<-15.35));

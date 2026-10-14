@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {outsideRectangle} from './caretaker-house.js';
 import {surface} from './surface-materials.js';
+import {livingPits} from './pool-apartment.js';
 
 // Apartment guide: list with areas and dimensions, colour-shaded units on the
 // floor-plan map (click to select), and a tinted floor in the 3D model.
@@ -35,7 +36,9 @@ export function buildApartmentGuide(scene,data,$,preloaded=null,groups=[]){
  const tints=[];
  function addFloorTints(){
   state.info.apartments.forEach((a,i)=>{const g=state.info.grid,parts=[];
-   for(const [r,c0,c1] of cellsOf(i)){const geo=new T.PlaneGeometry((c1-c0)*g.cell,g.cell);geo.rotateX(-Math.PI/2);geo.translate(g.x0+(c0+c1)/2*g.cell,0,g.z0+(r+.5)*g.cell);parts.push(geo)}
+   const inPit=(x,z)=>a.floor===0&&livingPits.some(p=>x>p.x0&&x<p.x1&&z>p.z0&&z<p.z1);
+   for(const [r,c0,c1] of cellsOf(i)){const z=g.z0+(r+.5)*g.cell;let s=c0;
+    for(let c=c0;c<=c1;c++){const cut=c===c1||inPit(g.x0+(c+.5)*g.cell,z);if(cut){if(c>s){const geo=new T.PlaneGeometry((c-s)*g.cell,g.cell);geo.rotateX(-Math.PI/2);geo.translate(g.x0+(s+c)/2*g.cell,0,z);parts.push(geo)}s=c+1}}}
    if(!parts.length)return;const geo=mergeGeometries(parts);parts.forEach(p=>p.dispose());
    const mesh=new T.Mesh(geo,new T.MeshStandardMaterial({color:a.color,roughness:.8,transparent:true,opacity:.62,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1}));
    mesh.position.y=.04;mesh.renderOrder=4;mesh.name='Farebná podlaha '+a.code;mesh.receiveShadow=true;

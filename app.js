@@ -1,5 +1,5 @@
 import {buildApartmentFurnishings,furnishingsBarrierAt} from './apartment-furnishings.js';
-import {applyPoolApartment,buildPoolApartment,apartmentBarrierAt} from './pool-apartment.js';
+import {applyPoolApartment,buildPoolApartment,apartmentBarrierAt,livingPits} from './pool-apartment.js';
 import {applyIndoorWellness,buildIndoorWellness,indoorWellnessBarrierAt,indoorWellness} from './indoor-wellness.js';
 import {applyWineCellar,buildWineCellar,cellarBarrierAt as wineCellarBarrierAt,cellar as wineCellar,applyCaretakerOffice,buildCaretakerOffice,caretakerOfficeBarrierAt} from './wine-cellar.js';
 import {buildApartmentGuide,applyStudio308,buildStudio308,markApartmentEntrances} from './apartments.js';
@@ -30,9 +30,17 @@ import {wellnessBarrierAt,wellnessCeiling,wellnessEntry,wellnessTarget} from './
 import {OrbitControls} from './assets/OrbitControls.js';
 const $=id=>document.getElementById(id), view=$('view');
 try{await start()}catch(e){$('loading').style.display='block';$('loading').textContent='Model sa nepodarilo načítať. Skús obnoviť stránku v prehliadači s podporou WebGL.';console.error(e)}
+// Structural columns from the source drawings are fixed: any small free-standing
+// element (0.2-0.7 m) removed by a layout change is put back unchanged.
+function lockColumns(original,plan){
+ const bb=p=>{const xs=p.map(q=>q[0]),zs=p.map(q=>q[1]);return [Math.min(...xs),Math.min(...zs),Math.max(...xs),Math.max(...zs)]};
+ original.forEach((level,f)=>{const have=plan[f].walls.map(bb);
+  for(const p of level.walls){const [x0,z0,x1,z1]=bb(p),w=x1-x0,d=z1-z0;if(w<.2||d<.2||w>.7||d>.7||Math.max(w,d)/Math.min(w,d)>1.8)continue;
+   const kept=have.some(([a,b,c,e])=>a<=x0+.02&&b<=z0+.02&&c>=x1-.02&&e>=z1-.02);if(!kept)plan[f].walls.push(p.map(q=>[...q]))}});
+}
 async function start(){
 const [furnishingData,data,,apartmentInfo]=await Promise.all([fetch('./assets/furniture-layout.json').then(r=>{if(!r.ok)throw Error('furniture layout');return r.json()}),fetch('./assets/model.json').then(r=>{if(!r.ok)throw Error('model');return r.json()}),prepareCarAssets(),fetch('./assets/apartments.json').then(r=>r.ok?r.json():null).catch(()=>null)]);
-data.forEach((level,i)=>level.base=levels[i]);applyCaretakerLayout(data);applyPoolApartment(data);applyIndoorWellness(data);applyWineCellar(data);applyCaretakerOffice(data);applyStudio308(data);if(apartmentInfo)markApartmentEntrances(data,apartmentInfo);
+data.forEach((level,i)=>level.base=levels[i]);const originalPlan=JSON.parse(JSON.stringify(data));applyCaretakerLayout(data);applyPoolApartment(data);applyIndoorWellness(data);applyWineCellar(data);applyCaretakerOffice(data);applyStudio308(data);lockColumns(originalPlan,data);if(apartmentInfo)markApartmentEntrances(data,apartmentInfo);
 const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;renderer.setClearColor(0xdce6eb);view.append(renderer.domElement);renderer.outputColorSpace=T.SRGBColorSpace;
 const scene=new T.Scene();const camera=new T.PerspectiveCamera(48,innerWidth/innerHeight,.35,1600);const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.maxDistance=150;controls.minDistance=2;controls.maxPolarAngle=Math.PI*.49;controls.target.set(0,3,-3);
 const daylight=addDaylight(scene,renderer);const renderQuality=createRenderQuality(renderer);let atmosphereTime=0;
@@ -87,6 +95,7 @@ for(let f=0;f<4;f++){
   if(i)subtractTopSurfaces(slab,footprints[f].slice(0,i).map(([x0,z0,x1,z1])=>rectOutline({x0,z0,x1,z1})),true);
   floorMeshes[f].push(slab);
  }
+ if(f===0)for(const slab of floorMeshes[0])subtractTopSurfaces(slab,livingPits.map(p=>rectOutline(p)),true);
  group.add(buildApartmentFurnishings(f,furnishingData.floors[f]));
  if(f===0){group.add(buildPoolApartment());const extra=[buildIndoorWellness(),buildWineCellar()];for(const g of extra){group.add(g);extraInteriors.push(g)}}
  if(f===1){const office=buildCaretakerOffice();group.add(office);extraInteriors.push(office)}
