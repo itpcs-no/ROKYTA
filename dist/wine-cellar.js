@@ -83,10 +83,11 @@ export function buildWineCellar(){
   box('Zábradlie',(st.x0+st.x1)/2,1.95,st.z1+.02,st.x1-st.x0,.05,.05,brass)}
  // Wine bar with cigar lounge (37 m2): bar counter, back bar, club chairs, humidor.
  {const r=c.lounge;
-  box('Barový pult',-8.4,.55,19.45,3.6,1.1,.65,walnut,true);box('Doska pultu',-8.4,1.12,19.45,3.75,.05,.78,stone);
+  // The bar counter wraps the two original columns, which stay in place.
+  box('Barový pult',-8.68,.55,19.63,3.95,1.1,.66,walnut,true);box('Doska pultu',-8.68,1.12,19.63,4.1,.05,.8,stone);
   rackZ('Stena s vínami za barom',c.x0+.02,18.5,20.9,1,2.2,.36);
-  for(let i=0;i<4;i++){const x=-9.8+i*.95;cyl('Barová stolička',x,.72,20.15,.2,.2,.06,leather);cyl('Noha stoličky',x,.36,20.15,.025,.12,.7,brass);cellarFurniture.push([x-.2,19.95,x+.2,20.35])}
-  for(const x of [-9.6,-8.4,-7.2])box('Závesné svetlo nad pultom',x,2.2,19.45,.22,.18,.22,lamp);
+  for(let i=0;i<4;i++){const x=-10.1+i*.95;cyl('Barová stolička',x,.72,20.4,.2,.2,.06,leather);cyl('Noha stoličky',x,.36,20.4,.025,.12,.7,brass);cellarFurniture.push([x-.2,20.2,x+.2,20.6])}
+  for(const x of [-9.7,-8.0,-7.2])box('Závesné svetlo nad pultom',x,2.2,19.63,.22,.18,.22,lamp);
   box('Humidor',-5.75,1.05,22.6,.55,2.1,1.4,walnut,true);box('Sklo humidora',-6.04,1.2,22.6,.02,1.5,1.2,glass);for(let y=.6;y<1.9;y+=.32)box('Krabice cigár',-5.8,y,22.6,.4,.12,1.1,oak);
   for(const [x,z] of [[-11.2,22.1],[-8.3,22.2]]){cyl('Nízky stolík',x,.5,z,.42,.42,.05,walnut);cyl('Podnož stolíka',x,.25,z,.06,.18,.48,brass,true);box('Popolník',x,.54,z,.18,.03,.18,black);
    for(const [dx,dz,rot] of [[-.95,0,Math.PI/2],[.95,0,-Math.PI/2],[0,-.95,0]]){
